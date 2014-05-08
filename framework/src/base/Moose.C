@@ -12,9 +12,9 @@
 /*            See COPYRIGHT for full restrictions               */
 /****************************************************************/
 
-#include "libmesh/petsc_macro.h"
+  #include "libmesh/petsc_macro.h"
 
-#include "Moose.h"
+  #include "Moose.h"
 #include "Factory.h"
 #include "NonlinearSystem.h"
 #include "PetscSupport.h"
