@@ -73,8 +73,7 @@
 []
 
 [Materials]
-  active = 'dm1 dm2'
-
+  active = 'dm1 dm2 dm3'
   [./dm1]
     type = GenericConstantMaterial
     block = 0
