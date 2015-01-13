@@ -53,6 +53,8 @@ Steady::problem()
   return _problem;
 }
 
+#include "Material.h"
+
 void
 Steady::init()
 {
@@ -68,6 +70,12 @@ Steady::init()
   Moose::setup_perf_log.push("Output Initial Condition","Setup");
   _problem.outputStep(EXEC_INITIAL);
   Moose::setup_perf_log.pop("Output Initial Condition","Setup");
+
+    const std::vector<Material * > material_list = _problem.getMaterialWarehouse(0).all();
+    std::string prop_name = "mult1";
+std::cout << prop_name << std::endl;
+for (unsigned int j = 0; j < material_list.size(); j++)
+  std::cout << "Material Name " << material_list[j]->name() << " Property name " << prop_name  << " " << material_list[j]->hasMaterialProperty<Real>(prop_name)  << std::endl;
 }
 
 void
