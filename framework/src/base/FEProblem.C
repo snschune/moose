@@ -1606,6 +1606,7 @@ FEProblem::addMaterial(const std::string & mat_name, const std::string & name, I
       parameters.set<bool>("_bnd") = false;
       parameters.set<bool>("_neighbor") = false;
       parameters.set<MaterialData *>("_material_data") = _material_data[tid];
+      parameters.set<MaterialData *>("_neighbor_material_data") = _material_data[tid];
       MooseSharedPointer<Material> volume_material = MooseSharedNamespace::static_pointer_cast<Material>(_factory.create(mat_name, name, parameters, tid));
       _materials[tid].addMaterial(block_ids, volume_material);
 
@@ -1613,6 +1614,7 @@ FEProblem::addMaterial(const std::string & mat_name, const std::string & name, I
       parameters.set<bool>("_bnd") = true;
       parameters.set<bool>("_neighbor") = false;
       parameters.set<MaterialData *>("_material_data") = _bnd_material_data[tid];
+      parameters.set<MaterialData *>("_neighbor_material_data") = _neighbor_material_data[tid];
       object_name = name + "_face";
       MooseSharedPointer<Material> face_material = MooseSharedNamespace::static_pointer_cast<Material>(_factory.create(mat_name, object_name, parameters, tid));
       _materials[tid].addFaceMaterial(block_ids, face_material);
@@ -1621,6 +1623,7 @@ FEProblem::addMaterial(const std::string & mat_name, const std::string & name, I
       parameters.set<bool>("_bnd") = true;
       parameters.set<bool>("_neighbor") = true;
       parameters.set<MaterialData *>("_material_data") = _neighbor_material_data[tid];
+      parameters.set<MaterialData *>("_neighbor_material_data") = _bnd_material_data[tid];
       object_name = name + "_neighbor";
       MooseSharedPointer<Material> neighbor_material = MooseSharedNamespace::static_pointer_cast<Material>(_factory.create(mat_name, object_name, parameters, tid));
       _materials[tid].addNeighborMaterial(block_ids, neighbor_material);
@@ -1630,6 +1633,7 @@ FEProblem::addMaterial(const std::string & mat_name, const std::string & name, I
       parameters.set<bool>("_bnd") = true;
       parameters.set<bool>("_neighbor") = false;
       parameters.set<MaterialData *>("_material_data") = _bnd_material_data[tid];
+      parameters.set<MaterialData *>("_neighbor_material_data") = _neighbor_material_data[tid];
       MooseSharedPointer<Material> bnd_material = MooseSharedNamespace::static_pointer_cast<Material>(_factory.create(mat_name, name, parameters, tid));
       _materials[tid].addBoundaryMaterial(boundary_ids, bnd_material);
     }

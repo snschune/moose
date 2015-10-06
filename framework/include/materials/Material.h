@@ -116,6 +116,19 @@ public:
 
   ///@{
   /**
+   * Retrieve the neighbor property through a given input parameter key with a fallback
+   * to getting it by name
+   */
+  template<typename T>
+  const MaterialProperty<T> & getNeighborMaterialProperty(const std::string & name);
+  template<typename T>
+  const MaterialProperty<T> & getNeighborMaterialPropertyOld(const std::string & name);
+  template<typename T>
+  const MaterialProperty<T> & getNeighborMaterialPropertyOlder(const std::string & name);
+  ///@}
+
+  ///@{
+  /**
    * Retrieve the property named "name"
    */
   template<typename T>
@@ -124,6 +137,18 @@ public:
   const MaterialProperty<T> & getMaterialPropertyOldByName(const std::string & prop_name);
   template<typename T>
   const MaterialProperty<T> & getMaterialPropertyOlderByName(const std::string & prop_name);
+  ///@}
+
+  ///@{
+  /**
+   * Retrieve the neighbor property named "name"
+   */
+  template<typename T>
+  const MaterialProperty<T> & getNeighborMaterialPropertyByName(const std::string & prop_name);
+  template<typename T>
+  const MaterialProperty<T> & getNeighborMaterialPropertyOldByName(const std::string & prop_name);
+  template<typename T>
+  const MaterialProperty<T> & getNeighborMaterialPropertyOlderByName(const std::string & prop_name);
   ///@}
 
   ///@{
@@ -184,6 +209,7 @@ protected:
   bool _bnd;
   bool _neighbor;
   MaterialData & _material_data;
+  MaterialData & _neighbor_material_data;
 
   unsigned int _qp;
 
@@ -302,6 +328,51 @@ Material::getMaterialPropertyOlder(const std::string & name)
 
 template<typename T>
 const MaterialProperty<T> &
+Material::getNeighborMaterialProperty(const std::string & name)
+{
+  // Check if the supplied parameter is a valid imput parameter key
+  std::string prop_name = deducePropertyName(name);
+
+  // Check if it's just a constant.
+  const MaterialProperty<T> * default_property = defaultMaterialProperty<T>(prop_name);
+  if (default_property)
+    return *default_property;
+
+  return getNeighborMaterialPropertyByName<T>(prop_name);
+}
+
+template<typename T>
+const MaterialProperty<T> &
+Material::getNeighborMaterialPropertyOld(const std::string & name)
+{
+  // Check if the supplied parameter is a valid imput parameter key
+  std::string prop_name = deducePropertyName(name);
+
+  // Check if it's just a constant.
+  const MaterialProperty<T> * default_property = defaultMaterialProperty<T>(prop_name);
+  if (default_property)
+    return *default_property;
+
+  return getNeighborMaterialPropertyOldByName<T>(prop_name);
+}
+
+template<typename T>
+const MaterialProperty<T> &
+Material::getNeighborMaterialPropertyOlder(const std::string & name)
+{
+  // Check if the supplied parameter is a valid imput parameter key
+  std::string prop_name = deducePropertyName(name);
+
+  // Check if it's just a constant.
+  const MaterialProperty<T> * default_property = defaultMaterialProperty<T>(prop_name);
+  if (default_property)
+    return *default_property;
+
+  return getNeighborMaterialPropertyOlderByName<T>(prop_name);
+}
+
+template<typename T>
+const MaterialProperty<T> &
 Material::getMaterialPropertyByName(const std::string & prop_name)
 {
   // The property may not exist yet, so declare it (declare/getMaterialProperty are referencing the same memory)
@@ -331,6 +402,36 @@ Material::getMaterialPropertyOlderByName(const std::string & prop_name)
   return _material_data.getPropertyOlder<T>(prop_name);
 }
 
+template<typename T>
+const MaterialProperty<T> &
+Material::getNeighborMaterialPropertyByName(const std::string & prop_name)
+{
+  // The property may not exist yet, so declare it (declare/getNeighborMaterialProperty are referencing the same memory)
+  _requested_props.insert(prop_name);
+  registerPropName(prop_name, true, Material::CURRENT);
+  _fe_problem.markMatPropRequested(prop_name);
+  return _neighbor_material_data.getProperty<T>(prop_name);
+}
+
+template<typename T>
+const MaterialProperty<T> &
+Material::getNeighborMaterialPropertyOldByName(const std::string & prop_name)
+{
+  _requested_props.insert(prop_name);
+  registerPropName(prop_name, true, Material::OLD);
+  _fe_problem.markMatPropRequested(prop_name);
+  return _neighbor_material_data.getPropertyOld<T>(prop_name);
+}
+
+template<typename T>
+const MaterialProperty<T> &
+Material::getNeighborMaterialPropertyOlderByName(const std::string & prop_name)
+{
+  _requested_props.insert(prop_name);
+  registerPropName(prop_name, true, Material::OLDER);
+  _fe_problem.markMatPropRequested(prop_name);
+  return _neighbor_material_data.getPropertyOlder<T>(prop_name);
+}
 
 template<typename T>
 MaterialProperty<T> &
