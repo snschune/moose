@@ -123,7 +123,7 @@ Transient::Transient(const InputParameters & parameters) :
     _timestep_tolerance(getParam<Real>("timestep_tolerance")),
     _target_time(declareRecoverableData<Real>("target_time", -1)),
     _use_multiapp_dt(getParam<bool>("use_multiapp_dt")),
-    _picard_it(declareRecoverableData<int>("picard_it", 0)),
+    _picard_it(declareRecoverableData<unsigned int>("picard_it", (unsigned int) 0)),
     _picard_max_its(getParam<unsigned int>("picard_max_its")),
     _picard_converged(declareRecoverableData<bool>("picard_converged", false)),
     _picard_initial_norm(declareRecoverableData<Real>("picard_initial_norm", 0.0)),
@@ -345,6 +345,10 @@ Transient::takeStep(Real input_dt)
     if (_picard_max_its > 1)
     {
       _picard_timestep_end_norm = _problem.computeResidualL2Norm();
+
+      // _synced_picard_timestep_begin_norm is always at the same iteration level as _picard_timestep_end_norm
+      // regardless when queried (before/after or in-between Picard it)
+      _synced_picard_timestep_begin_norm = _picard_timestep_begin_norm;
 
       _console << "Picard Norm after TIMESTEP_END MultiApps: " << _picard_timestep_end_norm << '\n';
 

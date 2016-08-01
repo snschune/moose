@@ -203,8 +203,31 @@ public:
    */
   //Because this returns the number of Picard iterations, rather than the current
   //iteration count (which starts at 0), increment by 1.
-  Real numPicardIts() { return _picard_it+1; }
+  unsigned int numPicardIts() const { return _picard_it + 1; }
 
+  /**
+   * Get the synced timestep begin norm of Picard residual
+   * @return The synced timestep begin norm of Picard residual
+   */
+  Real picardTimestepBeginResidual() const { return _synced_picard_timestep_begin_norm; }
+
+  /**
+   * Get the (synced) timestep end norm of Picard residual
+   * @return The synced timestep begin norm of Picard residual
+   */
+  Real picardTimestepEndResidual() const { return _picard_timestep_end_norm; }
+
+  /**
+   * Get the (synced) maximum of timestep begin/end norm of Picard residual
+   * @return The (synced) maximum of timestep begin/end norm of Picard residual
+   */
+  Real picardMaxResidual() const { return std::max(_picard_timestep_end_norm, _synced_picard_timestep_begin_norm); }
+
+  /**
+   * Get the drop of the maximum of the Picard residual norms compared with initial residual
+   * @return The drop of the maximum of the Picard residual norms compared with initial residual
+   */
+  Real picardResidualDrop() const { return picardMaxResidual() / _picard_initial_norm; }
 
 protected:
   /**
@@ -279,12 +302,13 @@ protected:
    * Picard Related
    */
   /// Number of Picard iterations to perform
-  int  & _picard_it;
+  unsigned int & _picard_it;
   Real _picard_max_its;
   bool & _picard_converged;
   Real & _picard_initial_norm;
   Real & _picard_timestep_begin_norm;
   Real & _picard_timestep_end_norm;
+  Real _synced_picard_timestep_begin_norm;
   Real _picard_rel_tol;
   Real _picard_abs_tol;
 
