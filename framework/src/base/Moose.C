@@ -297,6 +297,7 @@
 #include "DT2.h"
 #include "PostprocessorDT.h"
 #include "AB2PredictorCorrector.h"
+#include "PicardFunctionDT.h"
 
 // time integrators
 #include "SteadyState.h"
@@ -718,6 +719,7 @@ registerObjects(Factory & factory)
   registerTimeStepper(DT2);
   registerTimeStepper(PostprocessorDT);
   registerTimeStepper(AB2PredictorCorrector);
+  registerTimeStepper(PicardFunctionDT);
   // time integrators
   registerTimeIntegrator(SteadyState);
   registerTimeIntegrator(ImplicitEuler);
