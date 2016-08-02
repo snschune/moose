@@ -1,0 +1,7 @@
+[Tests]
+  [./picard_function_dt]
+    type = 'Exodiff'
+    input = 'picard_master.i'
+    exodiff = 'picard_master_out.e picard_master_out_sub0.e'
+  [../]
+[]
