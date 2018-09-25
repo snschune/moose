@@ -17,6 +17,16 @@ InputParameters
 validParams<PiecewiseMultilinear>()
 {
   InputParameters params = validParams<Function>();
+
+  MultiMooseEnum direction("left=0 right=1");
+  params.addParam<MultiMooseEnum>(
+      "direction", direction, "Direction to look to find value for each interpolation dimension.");
+
+
+  MooseEnum interp_order("constant=0 linear=1", "linear");
+  params.addParam<MooseEnum>(
+      "interpolation_order", interp_order, "Interpolation order " + interp_order.getRawNames());
+
   params.addParam<FileName>(
       "data_file",
       "File holding data for use with PiecewiseMultilinear.  Format: any empty line and any line "
@@ -40,11 +50,16 @@ validParams<PiecewiseMultilinear>()
 
 PiecewiseMultilinear::PiecewiseMultilinear(const InputParameters & parameters)
   : Function(parameters),
+    _interpolation_order(getParam<MooseEnum>("interpolation_order")),
     _gridded_data(libmesh_make_unique<GriddedData>(getParam<FileName>("data_file"))),
-    _dim(_gridded_data->getDim())
+    _dim(_gridded_data->getDim()),
+    _direction(getParam<MultiMooseEnum>("direction"))
 {
   _gridded_data->getAxes(_axes);
   _gridded_data->getGrid(_grid);
+
+  if (_interpolation_order == 0 && _direction.size() != _dim)
+    mooseError("Parameter direction must have a size identical to ", _dim);
 
   // GriddedData does not require monotonicity of axes, but we do
   for (unsigned int i = 0; i < _dim; ++i)
@@ -76,11 +91,32 @@ PiecewiseMultilinear::value(Real t, const Point & p)
     else if (_axes[i] == 3) // the time direction
       pt_in_grid[i] = t;
   }
-  return sample(pt_in_grid);
+  if (_interpolation_order == 0)
+    return sampleConstant(pt_in_grid);
+  return sampleLinear(pt_in_grid);
 }
 
 Real
-PiecewiseMultilinear::sample(const std::vector<Real> & pt)
+PiecewiseMultilinear::sampleConstant(const std::vector<Real> & pt)
+{
+  std::vector<unsigned int> left(_dim);
+  std::vector<unsigned int> right(_dim);
+  std::vector<unsigned int> arg(_dim);
+  for (unsigned int i = 0; i < _dim; ++i)
+  {
+    getNeighborIndices(_grid[i], pt[i], left[i], right[i]);
+    if (_direction.get(i) == 0)
+      arg[i] = left[i];
+    else
+      arg[i] = right[i];
+  }
+
+  // return the point
+  return _gridded_data->evaluateFcn(arg);
+}
+
+Real
+PiecewiseMultilinear::sampleLinear(const std::vector<Real> & pt)
 {
   /*
    * left contains the indices of the point to the 'left', 'down', etc, of pt
@@ -90,9 +126,7 @@ PiecewiseMultilinear::sample(const std::vector<Real> & pt)
   std::vector<unsigned int> left(_dim);
   std::vector<unsigned int> right(_dim);
   for (unsigned int i = 0; i < _dim; ++i)
-  {
     getNeighborIndices(_grid[i], pt[i], left[i], right[i]);
-  }
 
   /*
    * The following just loops through all the vertices of the

@@ -76,6 +76,13 @@
     requirement = "The PiecewiseMultilinear object shall perform interpolation on a 2D domain that compares to an equivalent known function."
   [../]
 
+  [./twoD_const]
+    type = 'Exodiff'
+    input = 'twoD_const.i'
+    exodiff = 'twoD_const.e'
+    requirement = "The PiecewiseMultilinear object shall perform constant interpolation on a 2D domain."
+  [../]
+
   [./fourDa]
     type = 'Exodiff'
     input = 'fourDa.i'

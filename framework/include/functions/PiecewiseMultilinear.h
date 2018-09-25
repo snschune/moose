@@ -45,10 +45,16 @@ public:
   virtual Real value(Real t, const Point & pt) override;
 
 private:
+  /// interpolation order: constant or linear
+  MooseEnum _interpolation_order;
+
   /// object to provide function evaluations at points on the grid
   std::unique_ptr<GriddedData> _gridded_data;
   /// dimension of the grid
   unsigned int _dim;
+
+  /// direction where to look for value if interpolation order is constant
+  MultiMooseEnum _direction;
 
   /**
    * _axes specifies how to embed the grid into the MOOSE coordinate frame
@@ -65,9 +71,18 @@ private:
   /**
    * This does the core work.  Given a point, pt, defined
    * on the grid (not the MOOSE simulation reference frame),
-   * interpolate the gridded data to this point
+   * interpolate the gridded data to this point using linear
+   * interpolation
    */
-  Real sample(const std::vector<Real> & pt);
+  Real sampleLinear(const std::vector<Real> & pt);
+
+  /**
+   * This does the core work.  Given a point, pt, defined
+   * on the grid (not the MOOSE simulation reference frame),
+   * interpolate the gridded data to this point using constant
+   * interpolation
+   */
+  Real sampleConstant(const std::vector<Real> & pt);
 
   /**
    * Operates on monotonically increasing in_arr.
