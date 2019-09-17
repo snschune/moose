@@ -96,4 +96,12 @@
     requirement = 'The system shall allow coupling radiative transfer between gray Lambert surfaces to solving heat conduction'
     design = 'ConstantViewFactorSurfaceRadiation.md'
   [../]
+
+  [./gray_lambert_cavity_automatic_vf]
+    type = CSVDiff
+    input = 'gray_lambert_cavity_automatic_vf.i'
+    csvdiff = 'gray_lambert_cavity_automatic_vf_out.csv'
+    requirement = 'The system shall compute radiative transfer between gray Lambert surfaces when the view factors are provided by a userobject'
+    design = 'ViewFactorObjectSurfaceRadiation.md'
+  [../]
 []
