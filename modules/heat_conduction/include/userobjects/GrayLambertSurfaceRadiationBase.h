@@ -12,20 +12,20 @@
 #include "SideUserObject.h"
 
 // Forward Declarations
-class GrayLambertSurfaceRadiation;
+class GrayLambertSurfaceRadiationBase;
 class Function;
 
 template <>
-InputParameters validParams<GrayLambertSurfaceRadiation>();
+InputParameters validParams<GrayLambertSurfaceRadiationBase>();
 
 /**
- * GrayLambertSurfaceRadiation computes the heat flux on a set of surfaces
+ * GrayLambertSurfaceRadiationBase computes the heat flux on a set of surfaces
  * in radiative heat transfer with each other.
  */
-class GrayLambertSurfaceRadiation : public SideUserObject
+class GrayLambertSurfaceRadiationBase : public SideUserObject
 {
 public:
-  GrayLambertSurfaceRadiation(const InputParameters & parameters);
+  GrayLambertSurfaceRadiationBase(const InputParameters & parameters);
 
   virtual void execute() override;
   virtual void initialize() override;
@@ -48,6 +48,9 @@ public:
 protected:
   virtual void threadJoin(const UserObject & y) override;
 
+  /// a purely virtual function that defines where view factors come from
+  virtual std::vector<std::vector<Real>> setViewFactors() = 0;
+
   /// Stefan-Boltzmann constant
   const Real _sigma_stefan_boltzmann;
 
@@ -59,9 +62,6 @@ protected:
 
   /// constant emissivity for each boundary
   const std::vector<Real> _emissivity;
-
-  /// the view factors, stored as square array here, but input allows specifying upper triangular part only
-  std::vector<std::vector<Real>> _view_factors;
 
   /// side id to index map, side ids can have holes or be out of order
   std::vector<const Function *> _fixed_side_temperature;
@@ -92,4 +92,7 @@ protected:
 
   /// the set of adiabatic boundaries
   std::set<unsigned int> _adiabatic_side_ids;
+
+  /// the view factors which are set by setVuewFactors by derived classes
+  std::vector<std::vector<Real>> _view_factors;
 };

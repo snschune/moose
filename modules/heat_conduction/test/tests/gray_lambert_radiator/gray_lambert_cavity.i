@@ -21,7 +21,7 @@
 
 [UserObjects]
   [./gray_lambert]
-    type = GrayLambertSurfaceRadiation
+    type = ConstantViewFactorSurfaceRadiation
     boundary = 'bottom top left right'
     fixed_temperature_boundary = 'bottom top'
     fixed_boundary_temperatures = '550 300'

@@ -7,23 +7,19 @@
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
 
-#include "GrayLambertSurfaceRadiation.h"
+#include "GrayLambertSurfaceRadiationBase.h"
 #include "MathUtils.h"
 #include "Function.h"
 #include "libmesh/quadrature.h"
 
-registerMooseObject("HeatConductionApp", GrayLambertSurfaceRadiation);
-
 template <>
 InputParameters
-validParams<GrayLambertSurfaceRadiation>()
+validParams<GrayLambertSurfaceRadiationBase>()
 {
   InputParameters params = validParams<SideUserObject>();
   params.addParam<Real>("stefan_boltzmann_constant", 5.670367e-8, "The Stefan-Boltzmann constant.");
   params.addRequiredCoupledVar("temperature", "The coupled temperature variable.");
   params.addRequiredParam<std::vector<Real>>("emissivity", "Emissivities for each boundary.");
-  params.addRequiredParam<std::vector<std::vector<Real>>>(
-      "view_factors", "The view factors from sideset i to sideset j.");
   params.addParam<std::vector<BoundaryName>>(
       "fixed_temperature_boundary",
       "The list of boundary IDs from the mesh with fixed temperatures.");
@@ -37,13 +33,12 @@ validParams<GrayLambertSurfaceRadiation>()
   return params;
 }
 
-GrayLambertSurfaceRadiation::GrayLambertSurfaceRadiation(const InputParameters & parameters)
+GrayLambertSurfaceRadiationBase::GrayLambertSurfaceRadiationBase(const InputParameters & parameters)
   : SideUserObject(parameters),
     _sigma_stefan_boltzmann(getParam<Real>("stefan_boltzmann_constant")),
     _n_sides(boundaryIDs().size()),
     _temperature(coupledValue("temperature")),
     _emissivity(getParam<std::vector<Real>>("emissivity")),
-    _view_factors(getParam<std::vector<std::vector<Real>>>("view_factors")),
     _radiosity(_n_sides),
     _heat_flux_density(_n_sides),
     _side_temperature(_n_sides),
@@ -64,41 +59,6 @@ GrayLambertSurfaceRadiation::GrayLambertSurfaceRadiation(const InputParameters &
     // consistency check on emissivity, must be as many entries as boundary
     if (boundary_names.size() != _emissivity.size())
       paramError("emissivity", "The number of entries must match the number of boundary entries.");
-  }
-
-  /*
-   * View factors must be provided as square array, while this seems redundant, it is necessary
-   * for enforcing energy continuity, i.e. sum of a row of the view factor matrix must be 1
-   * If this condition does not hold, a coupled heat equation, radiative transport problem
-   * will not converge.
-   */
-  if (_view_factors.size() != _n_sides)
-    paramError("view_factors",
-               "Leading dimension of view_factors must be equal to number of side sets.");
-
-  for (unsigned int i = 0; i < _n_sides; ++i)
-  {
-    if (_view_factors[i].size() != _n_sides)
-      paramError("view_factors",
-                 "view_factors must be provided as square array. Row ",
-                 i,
-                 " has ",
-                 _view_factors[i].size(),
-                 " entries.");
-
-    // check row-sum and normalize of necessary
-    Real sum = 0;
-    for (auto & v : _view_factors[i])
-      sum += v;
-
-    // an error of 5% is acceptable, but more indicates an error in the
-    // problem setup
-    if (abs(sum - 1) > 0.05)
-      paramError("view_factors", "view_factors row ", i, " sums to ", sum);
-
-    // correct view factors
-    for (auto & v : _view_factors[i])
-      v /= sum;
   }
 
   // get the fixed boundaries of the system if any are provided
@@ -168,7 +128,7 @@ GrayLambertSurfaceRadiation::GrayLambertSurfaceRadiation(const InputParameters &
 }
 
 void
-GrayLambertSurfaceRadiation::execute()
+GrayLambertSurfaceRadiationBase::execute()
 {
   if (_side_id_index.find(_current_boundary_id) == _side_id_index.end())
     mooseError("Current boundary id: ", _current_boundary_id, " not in _side_id_index.");
@@ -196,8 +156,30 @@ GrayLambertSurfaceRadiation::execute()
 }
 
 void
-GrayLambertSurfaceRadiation::initialize()
+GrayLambertSurfaceRadiationBase::initialize()
 {
+  // view factors are obtained here to make sure that another object had
+  // time to compute them on exec initial
+  _view_factors = setViewFactors();
+
+  // check row-sum and normalize if necessary
+  for (unsigned int i = 0; i < _n_sides; ++i)
+  {
+    Real sum = 0;
+    for (auto & v : _view_factors[i])
+      sum += v;
+
+    // an error of 5% is acceptable, but more indicates an error in the
+    // problem setup
+    if (abs(sum - 1) > 0.05)
+      mooseError("view_factors row ", i, " sums to ", sum);
+
+    // correct view factors
+    for (auto & v : _view_factors[i])
+      v /= sum;
+  }
+
+  // initialize areas, beta, side temps
   for (unsigned int j = 0; j < _n_sides; ++j)
   {
     _areas[j] = 0;
@@ -207,7 +189,7 @@ GrayLambertSurfaceRadiation::initialize()
 }
 
 void
-GrayLambertSurfaceRadiation::finalize()
+GrayLambertSurfaceRadiationBase::finalize()
 {
   // need to do some parallel communiction here
   for (unsigned int j = 0; j < _n_sides; ++j)
@@ -265,9 +247,9 @@ GrayLambertSurfaceRadiation::finalize()
 }
 
 void
-GrayLambertSurfaceRadiation::threadJoin(const UserObject & y)
+GrayLambertSurfaceRadiationBase::threadJoin(const UserObject & y)
 {
-  const GrayLambertSurfaceRadiation & pps = static_cast<const GrayLambertSurfaceRadiation &>(y);
+  const GrayLambertSurfaceRadiationBase & pps = static_cast<const GrayLambertSurfaceRadiationBase &>(y);
 
   for (unsigned int j = 0; j < _n_sides; ++j)
   {
@@ -278,7 +260,7 @@ GrayLambertSurfaceRadiation::threadJoin(const UserObject & y)
 }
 
 Real
-GrayLambertSurfaceRadiation::getSurfaceHeatFluxDensity(BoundaryID id) const
+GrayLambertSurfaceRadiationBase::getSurfaceHeatFluxDensity(BoundaryID id) const
 {
   if (_side_id_index.find(id) == _side_id_index.end())
     return 0;
@@ -286,7 +268,7 @@ GrayLambertSurfaceRadiation::getSurfaceHeatFluxDensity(BoundaryID id) const
 }
 
 Real
-GrayLambertSurfaceRadiation::getSurfaceTemperature(BoundaryID id) const
+GrayLambertSurfaceRadiationBase::getSurfaceTemperature(BoundaryID id) const
 {
   if (_side_id_index.find(id) == _side_id_index.end())
     return 0;
@@ -294,7 +276,7 @@ GrayLambertSurfaceRadiation::getSurfaceTemperature(BoundaryID id) const
 }
 
 Real
-GrayLambertSurfaceRadiation::getSurfaceRadiosity(BoundaryID id) const
+GrayLambertSurfaceRadiationBase::getSurfaceRadiosity(BoundaryID id) const
 {
   if (_side_id_index.find(id) == _side_id_index.end())
     return 0;

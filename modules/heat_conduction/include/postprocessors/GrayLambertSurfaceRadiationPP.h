@@ -10,7 +10,7 @@
 #pragma once
 
 #include "GeneralPostprocessor.h"
-#include "GrayLambertSurfaceRadiation.h"
+#include "GrayLambertSurfaceRadiationBase.h"
 
 class GrayLambertSurfaceRadiationPP;
 
@@ -19,7 +19,7 @@ InputParameters validParams<GrayLambertSurfaceRadiationPP>();
 
 /**
  * A postprocessor that extracts information from
- * the GrayLambertSurfaceRadiation UserObject
+ * the GrayLambertSurfaceRadiationBase UserObject
  */
 class GrayLambertSurfaceRadiationPP : public GeneralPostprocessor
 {
@@ -31,7 +31,7 @@ public:
   virtual PostprocessorValue getValue() override;
 
 protected:
-  const GrayLambertSurfaceRadiation & _glsr_uo;
+  const GrayLambertSurfaceRadiationBase & _glsr_uo;
   MooseEnum _return_type;
   BoundaryID _bnd_id;
 };
