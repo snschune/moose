@@ -1,29 +1,39 @@
 
-* Be able to sort objects for a specific executeflag using dependencyresolver
+Finite Volumes Notes
+=====================
 
-* Put pre-ic, pre/post-aux attributes in database so we can select on them directly - this data is
-  not a part of objects and must be added later, so we need the ability to update objects that are
-  already in the database with manually-specified attributes (i.e. not read off the object).
+Assembly
+---------
 
-* Canonical way to do (arbitrary) operations on  _enabled_ objects only - skipping not enabled objects. - this
-  is for things like residualSetup, jacobianSetup, initialize, finalize, execute, etc.
+This is info about how DG kernels get their values computed and stored into assembly:
 
-Questions:
-- are there ever user objects that only exist on certain threads (i.e. not on all threads)?
-- Are there duplicate instances of objects for each thread (I think so)?
-- Currently the warehouse doesn't know about threading-copy relationships between objects.  We
-    need to store this information somehow so we can query objects as a set (maybe?).  Actually
-    we need some sort of ThreadedInterface that keeps a pointer to the master thread object
-    pointer for joining.
+* Assembly holds vectors that collect residual values.
 
-- How to deal with partial queries but still be able to cache them?
-    - pre-build queries that will be needed by compute loop objects (i.e. objects of interest
-        grouped by thread+subdomain and thread+boundary combos) and pass in a data structure
-        containing the prebuilt query ids that the compute loops just execute.
+* TaggingInterface has local member variables that collect residual values for
+  specific tags.  Subclasses store info in _local_re and then call its
+  accumulateTaggedLocalResidual function to copy accumulated local vec
+  residual values into the assembly residual vector that is accessed by
+  pointer/reference.  This usually is called in e.g. Kernel::computeResidual,
+  DGKernel::computeElemNeighResidual, etc.
 
-- Keeping track of query ids is a huge pain.  Is there a better way to track+cache queries?
-    - macro that caches on the warehouse by a file and line number string of the call location?
-        But this doesn't handle thread locking.
+* The compute residual loop has an onInternalSide function that is called on
+  each elements' sides.  This is for DGKernels.  The DGKernel's regular
+  compute residual functions only get the computed residual stored in assembly
+  for the current element of the current internal side.  So the onInternalSide
+  loop manually has to get this residual contribution added to the neighbor
+  element too by calling FEProblem::addresidualNeighbor which takes the
+  current accumulated residual values in Assembly and adds them to the
+  neighbor residual vector.
 
-- add a way to "lock" the warehouse as immutable (except the cache) to prevent new objects from
-    being added (but still allow updating existing objects.
+This separation of residual collection is silly.  Element and neighbor
+residual accumulation into assembly should not be performed in two separate
+ways in very different places.  
+
+Face residual calculations for FV will always be terms that underwent the
+divergence theorem conversion to a surface integral and so will always be
+dotted with the unit normal vector.  So we can skip recomputing the residual
+contribution to each neighboring element of a face by just computing it for
+one element and then inverting the residual value's sign for the other
+element.
+
+
