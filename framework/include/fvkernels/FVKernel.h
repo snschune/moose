@@ -69,7 +69,8 @@ class ResidualAverage : public FVInterpMethod
 class FVKernelFace : public FVKernel
 {
 public:
-  FVKernelFace(const InputParameters & params) : _residual_interp_method(getParam(...)), ... {};
+  FVKernelFace(const InputParameters & params)
+    : _residual_interp_method(getParam(...)), _matprop_iface(this, {}, {}){};
 
   Real computeResidual()
   {
@@ -96,7 +97,39 @@ protected:
     // for other terms, e.g.: -1 * _normal *  _matprop * _grad_u
   }
 
+  void initLeft()
+  {
+    for (auto & pt : _matprop_pointers)
+      pt.current = pt.left;
+  }
+
+  void initRight()
+  {
+    for (auto & pt : _matprop_pointers)
+      pt.current = pt.right;
+  }
+
+  // And we need to do the same thing for coupled variables too.
+  template <typename T>
+  const MaterialProperty<T> *& getMaterialProperty(const std::string & name)
+  {
+    PointerToggle pt;
+    pt.left = &_matprop_iface.getMaterialProperty<T>(name);
+    pt.right = &_matprop_iface.getNeighborMaterialProperty<T>(name);
+    pt.current = pt.left;
+
+    _matprop_pointers.push_back(pt);
+    return reinterpret_cast<MaterialProperty<T> *>(pt.current);
+  }
+
 private:
+  struct PointerToggle
+  {
+    void * current = nullptr;
+    void * left = nullptr;
+    void * right = nullptr;
+  } std::vector<PointerToggle> _matprop_pointers;
+
   Real _convective_flux = 0;
 
   FVInterpMethod & _residual_interp_method;
