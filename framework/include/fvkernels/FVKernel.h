@@ -113,6 +113,29 @@ protected:
   template <typename T>
   const MaterialProperty<T> *& getMaterialProperty(const std::string & name)
   {
+    // This is the effect we are trying to achieve here:
+    //
+    //     struct PointerToggle{
+    //       void * current = nullptr;
+    //       void * left = nullptr;
+    //       void * right = nullptr;
+    //     };
+    //
+    //     int main(int argc, char** argv)
+    //     {
+    //       int a = 42;
+    //       int b = 43;
+    //       PointerToggle pt;
+    //       pt.left = &a;
+    //       pt.right = &b;
+    //       pt.current = pt.left;
+    //
+    //       int * & c = *((int **)(&pt.current));
+    //       std::cout << *c << "\n";
+    //       pt.current = pt.right;
+    //       std::cout << *c << "\n";
+    //       return 0;
+    //     }
     PointerToggle pt;
     pt.left = &_matprop_iface.getMaterialProperty<T>(name);
     pt.right = &_matprop_iface.getNeighborMaterialProperty<T>(name);
