@@ -48,7 +48,8 @@ public:
    * @param side - The side of the element in question.
    * @param bnd_id - ID of the boundary we are at
    */
-  virtual void onSide(const Elem * elem, unsigned int side, const Elem * neighbor, Real area);
+  virtual void
+  onSide(const Elem * elem, unsigned int side, const Elem * neighbor, const FaceInfo & fi);
 
   /**
    * Called before the boundary assembly
@@ -57,7 +58,8 @@ public:
    * @param side - The side of the element in question.
    * @param bnd_id - ID of the boundary we are at
    */
-  virtual void onBoundary(const Elem * elem, unsigned int side, BoundaryID boundary, Real area);
+  virtual void
+  onBoundary(const Elem * elem, unsigned int side, BoundaryID boundary, const FaceInfo & fi);
 
   /**
    * Called every time the current subdomain changes (i.e. the subdomain of _this_ element
@@ -73,20 +75,13 @@ public:
    * You might think that you can do some expensive stuff in here and get away with it...
    * but there are applications that have TONS of subdomains....
    */
-  virtual void neighborSubdomainChanged();
+  virtual void neighborSubdomainChanged(){};
 
   /**
    * Called if a MooseException is caught anywhere during the computation.
    * The single input parameter taken is a MooseException object.
    */
   virtual void caughtMooseException(MooseException &){};
-
-  /**
-   * Whether or not the loop should continue.
-   *
-   * @return true to keep going, false to stop.
-   */
-  virtual bool keepGoing() { return true; }
 
 protected:
   MooseMesh & _mesh;
@@ -147,9 +142,6 @@ ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, boo
       typename RangeType::const_iterator faceinfo = range.begin();
       for (faceinfo = range.begin(); faceinfo != range.end(); ++faceinfo)
       {
-        if (!keepGoing())
-          break;
-
         // The faceinfo structure will probably also need the distance between
         // cell centers of elements on each side of the side - to be used for
         // computing gradients of variables at the interface.
@@ -157,7 +149,6 @@ ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, boo
         unsigned int side = faceinfo->elem_side;
         const Elem * neighbor = faceinfo->neighbor_elem;
         unsigned int neighbor_side = faceinfo->neighbor_side;
-        Real area = faceinfo->common_face_area;
 
         _old_subdomain = _subdomain;
         _subdomain = elem->subdomain_id();
@@ -165,13 +156,13 @@ ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, boo
           subdomainChanged();
 
         // get elem's face residual contribution to it's neighbor
-        onSide(elem, side, neighbor, area);
+        onSide(elem, side, neighbor, *faceinfo);
 
         // boundary faces only border one element and so only contribute to
         // one element's residual
         std::vector<BoundaryID> boundary_ids = _mesh.getBoundaryIDs(elem, side);
         for (auto it = boundary_ids.begin(); it != boundary_ids.end(); ++it)
-          onBoundary(elem, side, *it, area);
+          onBoundary(elem, side, *it, *faceinfo);
       } // range
 
       post();
@@ -238,12 +229,18 @@ ComputeFVFaceResidualsThread<RangeType>::onSide(const Elem * elem,
   std::vector<FVKernel *> kernels;
   _fe_problem.theWarehouse()
       .query()
-      .condition<AttribSystem>("FVKernel")
+      .condition<AttribSystem>("FVKernelFace")
       .condition<AttribSubdomains>(_subdomain)
       .queryInto(kernels);
   if (kernels.size() == 0)
     return;
 
+  // TODO: we need to perform solution reconstruction here.  And reinit
+  // coupled variables and _u, _grad_u, etc. with reconstructed values at the
+  // interface
+
+  // this initializes info for elements on both sides of the face at the face
+  // We probably don't need this since we will use a separate reconstruction procedure
   _fe_problem.reinitNeighbor(elem, side, _tid);
 
   // Set up Sentinels so that, even if one of the reinitMaterialsXXX() calls throws, we
@@ -251,11 +248,14 @@ ComputeFVFaceResidualsThread<RangeType>::onSide(const Elem * elem,
   SwapBackSentinel face_sentinel(_fe_problem, &FEProblem::swapBackMaterialsFace, _tid);
   _fe_problem.reinitMaterialsFace(elem->subdomain_id(), _tid);
 
+  // this reinits the materials for the neighbor element on the face (although it may not look like
+  // it)
+  // We probably don't need this since we will use a separate reconstruction procedure
   SwapBackSentinel neighbor_sentinel(_fe_problem, &FEProblem::swapBackMaterialsNeighbor, _tid);
   _fe_problem.reinitMaterialsNeighbor(neighbor->subdomain_id(), _tid);
 
   for (const auto k : kernels)
-    k->computeResidual();
+    auto r = k->computeResidual();
 
   {
     Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
@@ -267,6 +267,27 @@ template <typename RangeType>
 void
 ComputeFVFaceResidualsThread<RangeType>::subdomainChanged()
 {
+  std::set<MooseVariableFEBase *> needed_mat_props;
+  std::set<unsigned int> needed_mat_props;
+
+  // TODO: do this for other relevant objects - like FV BCs, etc.
+  std::vector<FVKernel *> kernels;
+  _fe_problem.theWarehouse()
+      .query()
+      .condition<AttribSystem>("FVKernelFace")
+      .condition<AttribSubdomains>(_subdomain)
+      .queryInto(kernels);
+  for (auto k : kernels)
+  {
+    const auto & deps = k->getMooseVariableDependencies();
+    needed_moose_vars.insert(deps.begin(), deps.end());
+    const auto & mdeps = object->getMatPropDependencies();
+    needed_mat_props.insert(mdeps.begin(), mdeps.end());
+  }
+
+  _fe_problem.setActiveElementalMooseVariables(needed_moose_vars, _tid);
+  _fe_problem.setActiveMaterialProperties(needed_mat_props, _tid);
+  _fe_problem.prepareMaterials(_subdomain, _tid);
 }
 
 template <typename RangeType>

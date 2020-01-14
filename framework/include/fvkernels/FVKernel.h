@@ -66,17 +66,28 @@ class ResidualAverage : public FVInterpMethod
 // _u, _grad_u, _random_mat_prop_name, etc. - this will require writing some
 // sort of new FVCoupleable and FVMaterialProperty interfaces that toggle
 // between left and right elements' info.
-class FVKernelFace : public FVKernel
+class FVFluxKernel : public FVKernel
 {
 public:
-  FVKernelFace(const InputParameters & params)
+  FVFluxKernel(const InputParameters & params)
     : _residual_interp_method(getParam(...)), _matprop_iface(this, {}, {}){};
 
   Real computeResidual()
   {
-    if (_flux_interp_method)
-      _convective_flux = _flux_interp_method.interpolate(*this);
-    return _residual_interp_method.interpolate(*this);
+    auto r = _face_area * computeQpResidual();
+
+    if (ownElement())
+    {
+      prepareVectorTag(_assembly, _var.number());
+      _local_re(0) = r;
+      accumulateTaggedLocalResidual();
+    }
+    if (ownNeighbor())
+    {
+      prepareVectorTagNeighbor(_assembly, _var.number());
+      _local_re(0) = -r;
+      accumulateTaggedLocalResidual();
+    }
   }
 
   Real convectiveFlux() { return _convective_flux; }
@@ -91,72 +102,22 @@ protected:
     // etc.
   }
 
+  // material properties will be initialized on the face.  Reconstructed
+  // solutions will have been performed previous to this call and all coupled
+  // variables and _u, _grad_u, etc. will have their reconstructed values
+  // extrapolated to/at the face. This is possible because of the
+  // oneSidedConvectiveFlux function that helps us interpolate the advective
+  // flux quantity at the face so we can use it to reconstruct all these
+  // solutions.
   virtual Real computeQpResidual()
   {
     // for convective terms, e.g.: return convectiveFlux() * _u;
     // for other terms, e.g.: -1 * _normal *  _matprop * _grad_u
   }
 
-  void initLeft()
-  {
-    for (auto & pt : _matprop_pointers)
-      pt.current = pt.left;
-  }
-
-  void initRight()
-  {
-    for (auto & pt : _matprop_pointers)
-      pt.current = pt.right;
-  }
-
-  // And we need to do the same thing for coupled variables too.
-  template <typename T>
-  const MaterialProperty<T> *& getMaterialProperty(const std::string & name)
-  {
-    // This is the effect we are trying to achieve here:
-    //
-    //     struct PointerToggle{
-    //       void * current = nullptr;
-    //       void * left = nullptr;
-    //       void * right = nullptr;
-    //     };
-    //
-    //     int main(int argc, char** argv)
-    //     {
-    //       int a = 42;
-    //       int b = 43;
-    //       PointerToggle pt;
-    //       pt.left = &a;
-    //       pt.right = &b;
-    //       pt.current = pt.left;
-    //
-    //       int * & c = *((int **)(&pt.current));
-    //       std::cout << *c << "\n";
-    //       pt.current = pt.right;
-    //       std::cout << *c << "\n";
-    //       return 0;
-    //     }
-    PointerToggle pt;
-    pt.left = &_matprop_iface.getMaterialProperty<T>(name);
-    pt.right = &_matprop_iface.getNeighborMaterialProperty<T>(name);
-    pt.current = pt.left;
-
-    _matprop_pointers.push_back(pt);
-    return reinterpret_cast<MaterialProperty<T> *>(pt.current);
-  }
-
 private:
-  struct PointerToggle
-  {
-    void * current = nullptr;
-    void * left = nullptr;
-    void * right = nullptr;
-  } std::vector<PointerToggle> _matprop_pointers;
-
   Real _convective_flux = 0;
 
   FVInterpMethod & _residual_interp_method;
   FVInterpMethod * _flux_interp_method = nullptr;
-
-  TwoMaterialPropertyInterface _matprop_iface;
 };
