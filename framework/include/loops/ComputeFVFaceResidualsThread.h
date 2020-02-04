@@ -16,6 +16,24 @@
 #include "libmesh/libmesh_exceptions.h"
 #include "libmesh/elem.h"
 
+class FaceInfo
+{
+public:
+  FaceInfo() {}
+  Real faceArea();
+  const RealVectorValue & unitNormalVec();
+  const std::vector<Point> & faceNodes();
+
+  const Point & faceCentroid();
+  const Point & leftCentroid();
+  const Point & rightCentroid();
+
+  const Elem & leftElem();
+  const Elem & rightElem();
+  unsigned int leftSide();
+  unsigned int rightSide();
+};
+
 /**
  * Base class for assembly-like calculations.
  */
@@ -229,7 +247,7 @@ ComputeFVFaceResidualsThread<RangeType>::onSide(const Elem * elem,
   std::vector<FVKernel *> kernels;
   _fe_problem.theWarehouse()
       .query()
-      .condition<AttribSystem>("FVKernelFace")
+      .condition<AttribSystem>("FVFluxKernels")
       .condition<AttribSubdomains>(_subdomain)
       .queryInto(kernels);
   if (kernels.size() == 0)
@@ -250,17 +268,11 @@ ComputeFVFaceResidualsThread<RangeType>::onSide(const Elem * elem,
 
   // this reinits the materials for the neighbor element on the face (although it may not look like
   // it)
-  // We probably don't need this since we will use a separate reconstruction procedure
   SwapBackSentinel neighbor_sentinel(_fe_problem, &FEProblem::swapBackMaterialsNeighbor, _tid);
   _fe_problem.reinitMaterialsNeighbor(neighbor->subdomain_id(), _tid);
 
   for (const auto k : kernels)
     auto r = k->computeResidual();
-
-  {
-    Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
-    _fe_problem.addResidualNeighbor(_tid);
-  }
 }
 
 template <typename RangeType>
@@ -274,7 +286,7 @@ ComputeFVFaceResidualsThread<RangeType>::subdomainChanged()
   std::vector<FVKernel *> kernels;
   _fe_problem.theWarehouse()
       .query()
-      .condition<AttribSystem>("FVKernelFace")
+      .condition<AttribSystem>("FVFluxKernels")
       .condition<AttribSubdomains>(_subdomain)
       .queryInto(kernels);
   for (auto k : kernels)
