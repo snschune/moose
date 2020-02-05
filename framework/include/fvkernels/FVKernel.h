@@ -1,16 +1,10 @@
 #pragma once
 
-class FVKernel : public MooseObject, public TaggingInterface, public TransientInterface
-{
-public:
-  FVKernel(const InputParameters & params);
-  virtual Real computeResidual(const FaceInfo & fi) = 0;
-
-protected:
-  virtual Real computeQpResidual() = 0;
-};
-
-class FVFluxKernel : public FVKernel, public NeighborCoupleable, public TwoMaterialPropertyInterface
+class FVFluxKernel : public MooseObject,
+                     public TaggingInterface,
+                     public TransientInterface,
+                     public NeighborCoupleable,
+                     public TwoMaterialPropertyInterface
 {
 public:
   FVFluxKernel(const InputParameters & params);
@@ -24,24 +18,26 @@ protected:
   // extrapolated to/at the face.  Material properties will also have been
   // computed on the face using the face-reconstructed variable values.
   //
-  //   virtual Real computeQpResidual() override { ///... }
+  virtual Real computeQpResidual(const FaceInfo & fi) = 0;
 
-  const FaceInfo * _face_info;
   MooseVariable & _var;
+
   const VariableValue & _u_left;
   const VariableValue & _u_right;
   const VariableGradient & _grad_u_left;
   const VariableGradient & _grad_u_right;
-  const VariableGradient _grad_u_face;
+  const MooseArray<Point> & _normal;
+
+  const FaceInfo * _face_info = nullptr;
 
 private:
-  bool ownElement()
+  bool ownLeftElem()
   {
     // returns true if this processor owns the (left) element.
     // TODO: implement this
     return true;
   }
-  bool ownNeighbor()
+  bool ownRightElem()
   {
     // returns true if this processor owns the (right) neighbor.
     // TODO: implement this
