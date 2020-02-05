@@ -414,6 +414,12 @@ MooseMesh::prepare(bool force)
   // Prepared has been called
   _is_prepared = true;
   _needs_prepare_for_use = false;
+
+  // the mesh should be ready now so let's loop over element
+  // and do nothing
+  for (const auto & elem : *getActiveLocalElementRange())
+    elem->n_sides();
+  // that line simply accesses the number of side of this element.
 }
 
 void
