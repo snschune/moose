@@ -55,6 +55,7 @@
 #include "libmesh/point_locator_base.h"
 #include "libmesh/default_coupling.h"
 #include "libmesh/ghost_point_neighbors.h"
+#include "libmesh/fe_type.h"
 
 static const int GRAIN_SIZE =
     1; // the grain_size does not have much influence on our execution speed
@@ -433,6 +434,9 @@ MooseMesh::update()
   buildNodeList();
   buildBndElemList();
   cacheInfo();
+
+  if (_needs_face_info)
+    _face_info.build(this);
 }
 
 const Node &
@@ -2823,4 +2827,167 @@ std::unique_ptr<PointLocatorBase>
 MooseMesh::getPointLocator() const
 {
   return getMesh().sub_point_locator();
+}
+
+MooseMesh::FaceInfo::FaceInfo() {}
+
+void
+MooseMesh::FaceInfo::build(MooseMesh * mesh)
+{
+  // clear data structures
+  _n_faces = 0;
+  _face_areas.clear();
+  _adjacent_elems.clear();
+  _adjacent_elem_sides.clear();
+  _adjacent_elem_centroids.clear();
+
+  // loop over all active, local elements
+  auto begin = mesh->getMesh().active_local_elements_begin();
+  auto end = mesh->getMesh().active_local_elements_end();
+  for (auto it = begin; it != end; ++it)
+  {
+    const Elem * elem = *it;
+    const dof_id_type elem_id = elem->id();
+    for (unsigned int side = 0; side < elem->n_sides(); ++side)
+    {
+      // get the neighbor element
+      const Elem * neighbor = elem->neighbor_ptr(side);
+
+      // this is a boundary side
+      if (!neighbor)
+        continue;
+
+      // cannot retrieve the neighbor id before making sure there
+      // is a neighbor
+      const dof_id_type neighbor_id = neighbor->id();
+
+      if ((neighbor->active() && (neighbor->level() == elem->level()) && (elem_id < neighbor_id)) ||
+          (neighbor->level() < elem->level()))
+      {
+        // increase counter
+        ++_n_faces;
+
+        _adjacent_elems.push_back(std::pair<const Elem *, const Elem *>(elem, neighbor));
+        _adjacent_elem_sides.push_back(
+            std::pair<unsigned int, unsigned int>(side, neighbor->which_neighbor_am_i(elem)));
+        _adjacent_elem_centroids.push_back(
+            std::pair<Point, Point>(elem->centroid(), neighbor->centroid()));
+
+        // compute face area
+        std::unique_ptr<const Elem> face = elem->build_side_ptr(side);
+        _face_areas.push_back(face->volume());
+
+        // 1. compute face centroid
+        // 2. compute an averaged normal (av. normal is identical to all qp normals for 1st order
+        //    meshes)
+        Order order = elem->default_order();
+        unsigned int dim = elem->dim();
+        std::unique_ptr<FEBase> fe(FEBase::build(dim, FEType(order)));
+        QGauss qface(dim - 1, FEType(order).default_quadrature_order());
+        fe->attach_quadrature_rule(&qface);
+
+        const std::vector<Real> & JxW = fe->get_JxW();
+        const std::vector<Point> & normals = fe->get_normals();
+        const std::vector<Point> & xyz = fe->get_xyz();
+
+        fe->reinit(elem, side);
+        Point average_normal;
+        Point face_centroid;
+        for (unsigned int j = 0; j < JxW.size(); ++j)
+        {
+          average_normal += JxW[j] * normals[j];
+          face_centroid += JxW[j] * xyz[j];
+        }
+        average_normal /= _face_areas.back();
+        face_centroid /= _face_areas.back();
+
+        _normals.push_back(average_normal);
+        _face_centroids.push_back(face_centroid);
+      }
+    }
+  }
+}
+
+Real
+MooseMesh::FaceInfo::area(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _face_areas[id];
+}
+
+const Point &
+MooseMesh::FaceInfo::normal(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _normals[id];
+}
+
+const Point &
+MooseMesh::FaceInfo::faceCentroid(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _face_centroids[id];
+}
+
+const std::pair<const Elem *, const Elem *> &
+MooseMesh::FaceInfo::elements(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elems[id];
+}
+
+const std::pair<unsigned int, unsigned int> &
+MooseMesh::FaceInfo::sideIDs(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elem_sides[id];
+}
+
+const std::pair<Point, Point> &
+MooseMesh::FaceInfo::centroids(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elem_centroids[id];
+}
+
+const Elem *
+MooseMesh::FaceInfo::leftElem(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elems[id].first;
+}
+
+const Elem *
+MooseMesh::FaceInfo::rightElem(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elems[id].second;
+}
+
+const Point &
+MooseMesh::FaceInfo::leftCentroid(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elem_centroids[id].first;
+}
+
+const Point &
+MooseMesh::FaceInfo::rightCentroid(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elem_centroids[id].second;
+}
+
+unsigned int
+MooseMesh::FaceInfo::leftSideID(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elem_sides[id].first;
+}
+
+unsigned int
+MooseMesh::FaceInfo::rightSideID(dof_id_type id) const
+{
+  mooseAssert(id < _n_faces, "Face id " << id << " exceeds number of faces" << _n_faces);
+  return _adjacent_elem_sides[id].second;
 }

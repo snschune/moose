@@ -94,6 +94,73 @@ public:
     DISTRIBUTED
   };
 
+  class FaceInfo
+  {
+  public:
+    FaceInfo();
+
+    /// add a face
+    void build(MooseMesh * mesh);
+
+    /// returns the number of faces
+    dof_id_type nFaces() const { return _n_faces; }
+
+    /// returns the face area of face id
+    Real area(dof_id_type id) const;
+
+    /// returns the face area of face id
+    const Point & normal(dof_id_type id) const;
+
+    /// returns the face centroid
+    const Point & faceCentroid(dof_id_type id) const;
+
+    /// returns the face area of face id
+    const std::pair<const Elem *, const Elem *> & elements(dof_id_type id) const;
+
+    /// returns the local side ids for the elements on the left and the right
+    const std::pair<unsigned int, unsigned int> & sideIDs(dof_id_type id) const;
+
+    /// returns the centroids of the adjacent elements on the left and right
+    const std::pair<Point, Point> & centroids(dof_id_type id) const;
+
+    ///@{ returns the left and right adjacent elements
+    const Elem * leftElem(dof_id_type id) const;
+    const Elem * rightElem(dof_id_type id) const;
+    ///@}
+
+    ///@{ returns the left and right centroids
+    const Point & leftCentroid(dof_id_type id) const;
+    const Point & rightCentroid(dof_id_type id) const;
+    ///@}
+
+    ///@{ returns the left and right centroids
+    unsigned int leftSideID(dof_id_type id) const;
+    unsigned int rightSideID(dof_id_type id) const;
+    ///@}
+
+  protected:
+    /// the number of faces
+    dof_id_type _n_faces = 0;
+
+    /// the face areas
+    std::vector<Real> _face_areas;
+
+    /// the normals
+    std::vector<Point> _normals;
+
+    /// the left and right elem points
+    std::vector<std::pair<const Elem *, const Elem *>> _adjacent_elems;
+
+    /// the left and right local side ids
+    std::vector<std::pair<unsigned int, unsigned int>> _adjacent_elem_sides;
+
+    /// the centroids of the adjacent element on the left and right
+    std::vector<std::pair<Point, Point>> _adjacent_elem_centroids;
+
+    /// the centroids of the adjacent element on the left and right
+    std::vector<Point> _face_centroids;
+  };
+
   /**
    * Clone method.  Allocates memory you are responsible to clean up.
    */
@@ -886,6 +953,9 @@ public:
    */
   bool hasMeshBase() const { return _mesh.get() != nullptr; }
 
+  /// accessor for the FaceInfo object
+  const FaceInfo & faceInfo() const { return _face_info; }
+
 protected:
   /// Deprecated (DO NOT USE)
   std::vector<std::unique_ptr<GhostingFunctor>> _ghosting_functors;
@@ -1052,6 +1122,12 @@ protected:
 
   /// A vector holding the paired boundaries for a regular orthogonal mesh
   std::vector<std::pair<BoundaryID, BoundaryID>> _paired_boundary;
+
+  /// Boolean indicating if the FaceInfo object needs to be built
+  bool _needs_face_info = true;
+
+  /// FaceInfo object storing information for face based loops
+  FaceInfo _face_info;
 
   void cacheInfo();
   void freeBndNodes();
