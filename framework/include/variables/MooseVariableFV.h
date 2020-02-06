@@ -96,58 +96,20 @@ public:
   void clearDofIndices() override;
 
   void prepare() override;
-  void prepareNeighbor() override;
-  void prepareLowerD() override;
+  void prepareFace() override;
+
   virtual void prepareIC() override;
 
   void prepareAux() override;
-
-  void reinitNode() override;
   void reinitAux() override;
   void reinitAuxNeighbor() override;
 
-  void reinitNodes(const std::vector<dof_id_type> & nodes) override;
-  void reinitNodesNeighbor(const std::vector<dof_id_type> & nodes) override;
-
-  /**
-   * Whether or not this variable is actually using the shape function value.
-   *
-   * Currently hardcoded to true because we always compute the value.
-   */
-  bool usesPhi() const { return true; }
-  /**
-   * Whether or not this variable is actually using the shape function gradient.
-   *
-   * Currently hardcoded to true because we always compute the value.
-   */
-  bool usesGradPhi() const { return true; }
-  /**
-   * Whether or not this variable is actually using the shape function value.
-   *
-   * Currently hardcoded to true because we always compute the value.
-   */
-  bool usesPhiNeighbor() const { return true; }
-  /**
-   * Whether or not this variable is actually using the shape function gradient.
-   *
-   * Currently hardcoded to true because we always compute the value.
-   */
-  bool usesGradPhiNeighbor() const { return true; }
   /**
    * Whether or not this variable is computing any second derivatives.
    */
-  bool usesSecondPhi() const;
-
-  /**
-   * Whether or not this variable is actually using the shape function second derivative on a
-   * neighbor.
-   */
-  bool usesSecondPhiNeighbor() const;
-
-  /**
-   * Whether or not this variable is computing any second derivatives.
-   */
-  bool computingSecond() const { return usesSecondPhi(); }
+  bool computingSecond() const
+  { /* TODO;*/
+  }
 
   /**
    * Whether or not this variable is computing the curl
@@ -157,102 +119,20 @@ public:
   const std::set<SubdomainID> & activeSubdomains() const override;
   bool activeOnSubdomain(SubdomainID subdomain) const override;
 
-  bool isNodal() const override { return _element_data->isNodal(); }
   Moose::VarFieldType fieldType() const override;
   bool isVector() const override;
-  const Node * const & node() const { return _element_data->node(); }
-  const dof_id_type & nodalDofIndex() const override { return _element_data->nodalDofIndex(); }
-  virtual bool isNodalDefined() const override;
 
-  const Node * const & nodeNeighbor() const { return _neighbor_data->node(); }
-  const dof_id_type & nodalDofIndexNeighbor() const override
+  virtual const Elem * const & currentElem() const override { return _element_data->currentElem(); }
+  virtual const Elem * const & currentNeighbor() const override
   {
-    return _neighbor_data->nodalDofIndex();
+    return _neighbor_data->currentElem();
   }
-  bool isNodalNeighborDefined() const;
 
-  const Elem * const & currentElem() const override { return _element_data->currentElem(); }
-
-  /**
-   * Current side this variable is being evaluated on
-   */
-  const unsigned int & currentSide() const { return _element_data->currentSide(); }
-
-  /**
-   * Current neighboring element
-   */
-  const Elem * const & neighbor() const { return _neighbor_data->currentElem(); }
-
-  void getDofIndices(const Elem * elem, std::vector<dof_id_type> & dof_indices) const override;
   const std::vector<dof_id_type> & dofIndices() const final { return _element_data->dofIndices(); }
-  unsigned int numberOfDofs() const final { return _element_data->numberOfDofs(); }
   const std::vector<dof_id_type> & dofIndicesNeighbor() const final
   {
     return _neighbor_data->dofIndices();
   }
-  const std::vector<dof_id_type> & dofIndicesLower() const final
-  {
-    return _lower_data->dofIndices();
-  }
-
-  unsigned int numberOfDofsNeighbor() override { return _neighbor_data->dofIndices().size(); }
-
-  const FieldVariablePhiValue & phi() const { return _element_data->phi(); }
-  const FieldVariablePhiGradient & gradPhi() const { return _element_data->gradPhi(); }
-  const MappedArrayVariablePhiGradient & arrayGradPhi() const
-  {
-    return _element_data->arrayGradPhi();
-  }
-  const FieldVariablePhiSecond & secondPhi() const;
-  const FieldVariablePhiCurl & curlPhi() const;
-
-  const FieldVariablePhiValue & phiFace() const { return _element_data->phiFace(); }
-  const FieldVariablePhiGradient & gradPhiFace() const { return _element_data->gradPhiFace(); }
-  const MappedArrayVariablePhiGradient & arrayGradPhiFace() const
-  {
-    return _element_data->arrayGradPhiFace();
-  }
-  const FieldVariablePhiSecond & secondPhiFace() const;
-  const FieldVariablePhiCurl & curlPhiFace() const;
-
-  const FieldVariablePhiValue & phiNeighbor() const { return _neighbor_data->phi(); }
-  const FieldVariablePhiGradient & gradPhiNeighbor() const { return _neighbor_data->gradPhi(); }
-  const MappedArrayVariablePhiGradient & arrayGradPhiNeighbor() const
-  {
-    return _neighbor_data->arrayGradPhi();
-  }
-  const FieldVariablePhiSecond & secondPhiNeighbor() const;
-  const FieldVariablePhiCurl & curlPhiNeighbor() const;
-
-  const FieldVariablePhiValue & phiFaceNeighbor() const { return _neighbor_data->phiFace(); }
-  const FieldVariablePhiGradient & gradPhiFaceNeighbor() const
-  {
-    return _neighbor_data->gradPhiFace();
-  }
-  const MappedArrayVariablePhiGradient & arrayGradPhiFaceNeighbor() const
-  {
-    return _neighbor_data->arrayGradPhiFace();
-  }
-  const FieldVariablePhiSecond & secondPhiFaceNeighbor() const;
-  const FieldVariablePhiCurl & curlPhiFaceNeighbor() const;
-
-  const FieldVariablePhiValue & phiLower() const { return _lower_data->phi(); }
-  const FieldVariablePhiGradient & gradPhiLower() const { return _lower_data->gradPhi(); }
-
-  template <ComputeStage compute_stage>
-  const typename VariableTestGradientType<OutputType, compute_stage>::type & adGradPhi()
-  {
-    return _element_data->template adGradPhi<compute_stage>();
-  }
-
-  template <ComputeStage compute_stage>
-  const typename VariableTestGradientType<OutputType, compute_stage>::type & adGradPhiFace()
-  {
-    return _element_data->template adGradPhiFace<compute_stage>();
-  }
-
-  // damping
-  const FieldVariableValue & increment() const { return _element_data->increment(); }
 
   const FieldVariableValue & vectorTagValue(TagID tag)
   {
@@ -262,6 +142,16 @@ public:
   {
     return _element_data->matrixTagValue(tag);
   }
+  const FieldVariableValue & vectorTagValueNeighbor(TagID tag)
+  {
+    return _neighbor_data->vectorTagValue(tag);
+  }
+  const FieldVariableValue & matrixTagValueNeighbor(TagID tag)
+  {
+    return _neighbor_data->matrixTagValue(tag);
+  }
+
+  ///////////////// TODO: START of soln funcs to rewrite ////////////////////
 
   /// element solutions
   const FieldVariableValue & sln() const { return _element_data->sln(Moose::Current); }
@@ -428,25 +318,12 @@ public:
   const VariableValue & duDotDuNeighbor() const { return _neighbor_data->duDotDu(); }
   const VariableValue & duDotDotDuNeighbor() const { return _neighbor_data->duDotDotDu(); }
 
-  /// lower-d element solution
-  template <ComputeStage compute_stage>
-  const typename VariableValueType<OutputType, compute_stage>::type & adSlnLower() const
-  {
-    return _lower_data->template adSln<compute_stage>();
-  }
-  const FieldVariableValue & slnLower() const { return _lower_data->sln(Moose::Current); }
+  ///////////////// TODO: END of soln funcs to rewrite ////////////////////
 
   /// Actually compute variable values from the solution vectors
   virtual void computeElemValues() override;
   virtual void computeElemValuesFace() override;
-  virtual void computeNeighborValuesFace() override;
-  virtual void computeNeighborValues() override;
-  virtual void computeLowerDValues() override;
 
-  /**
-   * Set nodal value
-   */
-  void setNodalValue(const OutputType & value, unsigned int idx = 0);
   /**
    * Set local DOF values and evaluate the values on quadrature points
    */
@@ -454,23 +331,6 @@ public:
 
   void setDofValue(const OutputData & value, unsigned int index);
 
-  /**
-   * Write a nodal value to the passed-in solution vector
-   */
-  void insertNodalValue(NumericVector<Number> & residual, const OutputData & v);
-
-  /**
-   * Get the value of this variable at given node
-   */
-  OutputData getNodalValue(const Node & node);
-  /**
-   * Get the old value of this variable at given node
-   */
-  OutputData getNodalValueOld(const Node & node);
-  /**
-   * Get the t-2 value of this variable at given node
-   */
-  OutputData getNodalValueOlder(const Node & node);
   /**
    * Get the current value of this variable on an element
    * @param[in] elem   Element at which to get value
@@ -495,11 +355,11 @@ public:
   /**
    * Set the current local DOF values to the input vector
    */
-  void insert(NumericVector<Number> & residual) override;
+  virtual void insert(NumericVector<Number> & residual) override;
   /**
    * Add the current local DOF values to the input vector
    */
-  void add(NumericVector<Number> & residual) override;
+  virtual void add(NumericVector<Number> & residual) override;
   /**
    * Add passed in local DOF values onto the current solution
    */
@@ -538,22 +398,11 @@ public:
   const MooseArray<typename Moose::RealType<compute_stage>::type> & adDofValues();
 
   /**
-   * Compute and store incremental change in solution at QPs based on increment_vec
+   * Note: const monomial is always the case - higher order solns are
+   * reconstructed - so this is simpler func than FE equivalent.
    */
-  void computeIncrementAtQps(const NumericVector<Number> & increment_vec);
-
-  /**
-   * Compute and store incremental change at the current node based on increment_vec
-   */
-  void computeIncrementAtNode(const NumericVector<Number> & increment_vec);
-
-  /**
-   * Compute the variable value at a point on an element
-   * @param elem The element we are computing on
-   * @param phi Evaluated shape functions at a point
-   * @return The variable value
-   */
-  OutputType getValue(const Elem * elem, const std::vector<std::vector<OutputShape>> & phi) const;
+  OutputType getValue() const;
+  OutputType getValueNeighbor() const;
 
   /**
    * Compute the variable gradient value at a point on an element
@@ -566,83 +415,12 @@ public:
       const std::vector<std::vector<typename OutputTools<OutputType>::OutputShapeGradient>> &
           grad_phi) const;
 
-  /**
-   * Return phi size
-   */
-  virtual size_t phiSize() const final { return _element_data->phiSize(); }
-  /**
-   * Return phiFace size
-   */
-  virtual size_t phiFaceSize() const final { return _element_data->phiFaceSize(); }
-  /**
-   * Return phiNeighbor size
-   */
-  virtual size_t phiNeighborSize() const final { return _neighbor_data->phiSize(); }
-  /**
-   * Return phiFaceNeighbor size
-   */
-  virtual size_t phiFaceNeighborSize() const final { return _neighbor_data->phiFaceSize(); }
-
-  size_t phiLowerSize() const final { return _lower_data->phiSize(); }
-
-  /**
-   * Methods for retrieving values of variables at the nodes
-   */
-  const OutputType & nodalValue();
-  const OutputType & nodalValueOld();
-  const OutputType & nodalValueOlder();
-  const OutputType & nodalValuePreviousNL();
-  const OutputType & nodalValueDot();
-  const OutputType & nodalValueDotDot();
-  const OutputType & nodalValueDotOld();
-  const OutputType & nodalValueDotDotOld();
-  const OutputType & nodalValueDuDotDu();
-  const OutputType & nodalValueDuDotDotDu();
-  const OutputType & nodalValueNeighbor();
-  const OutputType & nodalValueOldNeighbor();
-  const OutputType & nodalValueOlderNeighbor();
-  const OutputType & nodalValuePreviousNLNeighbor();
-  const OutputType & nodalValueDotNeighbor();
-  const OutputType & nodalValueDotDotNeighbor();
-  const OutputType & nodalValueDotOldNeighbor();
-  const OutputType & nodalValueDotDotOldNeighbor();
-  const OutputType & nodalValueDuDotDuNeighbor();
-  const OutputType & nodalValueDuDotDotDuNeighbor();
-
-  /**
-   * Methods for retrieving values of variables at the nodes in a MooseArray for AuxKernelBase
-   */
-  const MooseArray<OutputType> & nodalValueArray()
-  {
-    return _element_data->nodalValueArray(Moose::Current);
-  }
-  const MooseArray<OutputType> & nodalValueOldArray()
-  {
-    return _element_data->nodalValueArray(Moose::Old);
-  }
-  const MooseArray<OutputType> & nodalValueOlderArray()
-  {
-    return _element_data->nodalValueArray(Moose::Older);
-  }
-
-  const DoFValue & nodalVectorTagValue(TagID tag);
-  const DoFValue & nodalMatrixTagValue(TagID tag);
-
-  template <ComputeStage compute_stage>
-  const typename Moose::ValueType<OutputType, compute_stage>::type & adNodalValue();
-
-  virtual void computeNodalValues() override;
-  virtual void computeNodalNeighborValues() override;
-
 protected:
   /// Holder for all the data associated with the "main" element
   std::unique_ptr<MooseVariableData<OutputType>> _element_data;
 
   /// Holder for all the data associated with the neighbor element
   std::unique_ptr<MooseVariableData<OutputType>> _neighbor_data;
-
-  /// Holder for all the data associated with the lower dimeensional element
-  std::unique_ptr<MooseVariableData<OutputType>> _lower_data;
 };
 
 template <typename OutputType>
@@ -653,10 +431,3 @@ MooseVariableFV<OutputType>::adDofValues()
   return _element_data->template adDofValues<compute_stage>();
 }
 
-template <typename OutputType>
-template <ComputeStage compute_stage>
-inline const typename Moose::ValueType<OutputType, compute_stage>::type &
-MooseVariableFV<OutputType>::adNodalValue()
-{
-  return _element_data->template adNodalValue<compute_stage>();
-}
