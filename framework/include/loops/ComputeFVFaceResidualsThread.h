@@ -66,18 +66,14 @@ public:
    * @param side - The side of the element in question.
    * @param bnd_id - ID of the boundary we are at
    */
-  virtual void
-  onSide(const Elem * elem, unsigned int side, const Elem * neighbor, const FaceInfo & fi);
+  virtual void onFace(const FaceInfo & fi);
 
   /**
    * Called before the boundary assembly
    *
-   * @param elem - The element we are checking is on the boundary.
-   * @param side - The side of the element in question.
    * @param bnd_id - ID of the boundary we are at
    */
-  virtual void
-  onBoundary(const Elem * elem, unsigned int side, BoundaryID boundary, const FaceInfo & fi);
+  virtual void onBoundary(const FaceInfo & fi, BoundaryID boundary);
 
   /**
    * Called every time the current subdomain changes (i.e. the subdomain of _this_ element
@@ -160,13 +156,8 @@ ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, boo
       typename RangeType::const_iterator faceinfo = range.begin();
       for (faceinfo = range.begin(); faceinfo != range.end(); ++faceinfo)
       {
-        // The faceinfo structure will probably also need the distance between
-        // cell centers of elements on each side of the side - to be used for
-        // computing gradients of variables at the interface.
-        const Elem * elem = faceinfo->elem;
-        unsigned int side = faceinfo->elem_side;
-        const Elem * neighbor = faceinfo->neighbor_elem;
-        unsigned int neighbor_side = faceinfo->neighbor_side;
+        const Elem & elem = faceinfo->leftElem();
+        unsigned int side = faceinfo->leftSide();
 
         _old_subdomain = _subdomain;
         _subdomain = elem->subdomain_id();
@@ -174,13 +165,13 @@ ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, boo
           subdomainChanged();
 
         // get elem's face residual contribution to it's neighbor
-        onSide(elem, side, neighbor, *faceinfo);
+        onFace(*faceinfo);
 
         // boundary faces only border one element and so only contribute to
         // one element's residual
-        std::vector<BoundaryID> boundary_ids = _mesh.getBoundaryIDs(elem, side);
+        std::vector<BoundaryID> boundary_ids = _mesh.getBoundaryIDs(&elem, side);
         for (auto it = boundary_ids.begin(); it != boundary_ids.end(); ++it)
-          onBoundary(elem, side, *it, *faceinfo);
+          onBoundary(*faceinfo, *it);
       } // range
 
       post();
@@ -210,10 +201,7 @@ ComputeFVFaceResidualsThread<RangeType>::post()
 
 template <typename RangeType>
 void
-ComputeFVFaceResidualsThread<RangeType>::onBoundary(const Elem * elem,
-                                                    unsigned int side,
-                                                    BoundaryID bnd_id,
-                                                    Real area)
+ComputeFVFaceResidualsThread<RangeType>::onBoundary(const FaceInfo & fi, BoundaryID bnd_id)
 {
   std::vector<FVBoundaryCondition *> bcs;
   _fe_problem.theWarehouse()
@@ -224,7 +212,7 @@ ComputeFVFaceResidualsThread<RangeType>::onBoundary(const Elem * elem,
   if (bcs.size() == 0)
     return;
 
-  _fe_problem.reinitElemFace(elem, side, bnd_id, _tid);
+  _fe_problem.reinitElemFace(fi.leftElem(), fi.leftSide(), bnd_id, _tid);
 
   // Set up Sentinel class so that, even if reinitMaterialsFace() throws, we
   // still remember to swap back during stack unwinding.
@@ -239,10 +227,7 @@ ComputeFVFaceResidualsThread<RangeType>::onBoundary(const Elem * elem,
 
 template <typename RangeType>
 void
-ComputeFVFaceResidualsThread<RangeType>::onSide(const Elem * elem,
-                                                unsigned int side,
-                                                const Elem * neighbor,
-                                                Real area)
+ComputeFVFaceResidualsThread<RangeType>::onFace(const FaceInfo & fi)
 {
   std::vector<FVKernel *> kernels;
   _fe_problem.theWarehouse()
@@ -253,23 +238,23 @@ ComputeFVFaceResidualsThread<RangeType>::onSide(const Elem * elem,
   if (kernels.size() == 0)
     return;
 
-  // TODO: we need to perform solution reconstruction here.  And reinit
-  // coupled variables and _u, _grad_u, etc. with reconstructed values at the
-  // interface
+  // TODO: we should do reconstruction on-demand inside the FV
+  // variable class and return reconstructed values for face reinits and
+  // regular values for volume reinits.
 
-  // this initializes info for elements on both sides of the face at the face
-  // We probably don't need this since we will use a separate reconstruction procedure
-  _fe_problem.reinitNeighbor(elem, side, _tid);
+  // This needs to skip all the regular FE and fancy quadrature (re)init stuff
+  // and just update assembly and dof indices sorts of things as necessary.
+  _fe_problem.reinitFVFace(fi);
 
   // Set up Sentinels so that, even if one of the reinitMaterialsXXX() calls throws, we
   // still remember to swap back during stack unwinding.
   SwapBackSentinel face_sentinel(_fe_problem, &FEProblem::swapBackMaterialsFace, _tid);
-  _fe_problem.reinitMaterialsFace(elem->subdomain_id(), _tid);
+  _fe_problem.reinitMaterialsFace(fi.leftElem().subdomain_id(), _tid);
 
   // this reinits the materials for the neighbor element on the face (although it may not look like
   // it)
   SwapBackSentinel neighbor_sentinel(_fe_problem, &FEProblem::swapBackMaterialsNeighbor, _tid);
-  _fe_problem.reinitMaterialsNeighbor(neighbor->subdomain_id(), _tid);
+  _fe_problem.reinitMaterialsNeighbor(fi.rightElem().subdomain_id(), _tid);
 
   for (const auto k : kernels)
     auto r = k->computeResidual();

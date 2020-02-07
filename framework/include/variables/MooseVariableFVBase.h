@@ -40,10 +40,6 @@ public:
   /// Prepare the initial condition
   virtual void prepareIC() = 0;
 
-  virtual void prepareAux() = 0;
-  virtual void reinitAux() = 0;
-  virtual void reinitAuxNeighbor() = 0;
-
   /// Filed type of this variable
   virtual Moose::VarFieldType fieldType() const = 0;
 

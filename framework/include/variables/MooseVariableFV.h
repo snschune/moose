@@ -100,10 +100,6 @@ public:
 
   virtual void prepareIC() override;
 
-  void prepareAux() override;
-  void reinitAux() override;
-  void reinitAuxNeighbor() override;
-
   /**
    * Whether or not this variable is computing any second derivatives.
    */

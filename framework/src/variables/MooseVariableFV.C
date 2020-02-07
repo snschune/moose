@@ -36,15 +36,6 @@ MooseVariableFV<OutputType>::MooseVariableFV(const InputParameters & parameters)
                                                          _assembly.qRuleNeighbor(),
                                                          _assembly.nodeNeighbor(),
                                                          _assembly.neighbor());
-  _lower_data =
-      libmesh_make_unique<MooseVariableData<OutputType>>(*this,
-                                                         _sys,
-                                                         _tid,
-                                                         Moose::ElementType::Lower,
-                                                         _assembly.qRuleFace(),
-                                                         _assembly.qRuleFace(), // Place holder
-                                                         _assembly.node(),      // Place holder
-                                                         _assembly.lowerDElem());
 }
 
 template <typename OutputType>
@@ -88,28 +79,12 @@ MooseVariableFV<OutputType>::prepare()
 {
   _element_data->prepare();
 }
-
 template <typename OutputType>
 void
-MooseVariableFV<OutputType>::prepareNeighbor()
+MooseVariableFV<OutputType>::prepareFace()
 {
+  _element_data->prepare();
   _neighbor_data->prepare();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::prepareLowerD()
-{
-  _lower_data->prepare();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::prepareAux()
-{
-  _element_data->hasDofValues(false);
-  _neighbor_data->hasDofValues(false);
-  _lower_data->hasDofValues(false);
 }
 
 template <typename OutputType>
@@ -117,20 +92,6 @@ void
 MooseVariableFV<OutputType>::reinitNode()
 {
   _element_data->reinitNode();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::reinitAux()
-{
-  _element_data->reinitAux();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::reinitAuxNeighbor()
-{
-  _neighbor_data->reinitAux();
 }
 
 template <typename OutputType>
@@ -410,28 +371,6 @@ MooseVariableFV<OutputType>::computeNeighborValues()
 {
   _neighbor_data->setGeometry(Moose::Volume);
   _neighbor_data->computeValues();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::computeLowerDValues()
-{
-  _lower_data->setGeometry(Moose::Volume);
-  _lower_data->computeValues();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::computeIncrementAtQps(const NumericVector<Number> & increment_vec)
-{
-  _element_data->computeIncrementAtQps(increment_vec);
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::computeIncrementAtNode(const NumericVector<Number> & increment_vec)
-{
-  _element_data->computeIncrementAtNode(increment_vec);
 }
 
 template <typename OutputType>
