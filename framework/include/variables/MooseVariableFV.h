@@ -149,6 +149,7 @@ public:
 
   ///////////////// TODO: START of soln funcs to rewrite ////////////////////
   //
+
   const FieldVariableValue & uDot() const { return _element_data->uDot(); }
   const FieldVariableValue & sln() const { return _element_data->sln(Moose::Current); }
   const FieldVariableGradient & gradSln() const { return _element_data->gradSln(Moose::Current); }
@@ -159,45 +160,10 @@ public:
     return _neighbor_data->gradSln(Moose::Current);
   }
 
-  /*
-  /// element solutions
-  const FieldVariableValue & sln() const { return _element_data->sln(Moose::Current); }
-  const FieldVariableValue & slnOld() const { return _element_data->sln(Moose::Old); }
-  const FieldVariableValue & slnOlder() const { return _element_data->sln(Moose::Older); }
-  const FieldVariableValue & slnPreviousNL() const { return _element_data->sln(Moose::PreviousNL); }
-
-  /// element gradients
-  const FieldVariableGradient & gradSln() const { return _element_data->gradSln(Moose::Current); }
-  const FieldVariableGradient & gradSlnOld() const { return _element_data->gradSln(Moose::Old); }
-  const FieldVariableGradient & gradSlnOlder() const
-  {
-    return _element_data->gradSln(Moose::Older);
-  }
-  const FieldVariableGradient & gradSlnPreviousNL() const
-  {
-    return _element_data->gradSln(Moose::PreviousNL);
-  }
-
-  /// element gradient dots
-  const FieldVariableGradient & gradSlnDot() const { return _element_data->gradSlnDot(); }
-  const FieldVariableGradient & gradSlnDotDot() const { return _element_data->gradSlnDotDot(); }
-
-  /// element seconds
-  const FieldVariableSecond & secondSln() const { return _element_data->secondSln(Moose::Current); }
-  const FieldVariableSecond & secondSlnOld() const { return _element_data->secondSln(Moose::Old); }
-  const FieldVariableSecond & secondSlnOlder() const
-  {
-    return _element_data->secondSln(Moose::Older);
-  }
-  const FieldVariableSecond & secondSlnPreviousNL() const
-  {
-    return _element_data->secondSln(Moose::PreviousNL);
-  }
-
-  /// element curls
-  const FieldVariableCurl & curlSln() const { return _element_data->curlSln(Moose::Current); }
-  const FieldVariableCurl & curlSlnOld() const { return _element_data->curlSln(Moose::Old); }
-  const FieldVariableCurl & curlSlnOlder() const { return _element_data->curlSln(Moose::Older); }
+  const VariableValue & duDotDu() const { return _element_data->duDotDu(); }
+  const VariableValue & duDotDotDu() const { return _element_data->duDotDotDu(); }
+  const VariableValue & duDotDuNeighbor() const { return _neighbor_data->duDotDu(); }
+  const VariableValue & duDotDotDuNeighbor() const { return _neighbor_data->duDotDotDu(); }
 
   /// AD
   template <ComputeStage compute_stage>
@@ -209,11 +175,6 @@ public:
   const typename VariableGradientType<OutputType, compute_stage>::type & adGradSln() const
   {
     return _element_data->template adGradSln<compute_stage>();
-  }
-  template <ComputeStage compute_stage>
-  const typename VariableSecondType<OutputType, compute_stage>::type & adSecondSln() const
-  {
-    return _element_data->template adSecondSln<compute_stage>();
   }
   template <ComputeStage compute_stage>
   const typename VariableValueType<OutputType, compute_stage>::type & adUDot() const
@@ -233,99 +194,11 @@ public:
     return _neighbor_data->template adGradSln<compute_stage>();
   }
   template <ComputeStage compute_stage>
-  const typename VariableSecondType<OutputType, compute_stage>::type & adSecondSlnNeighbor() const
-  {
-    return _neighbor_data->template adSecondSln<compute_stage>();
-  }
-  template <ComputeStage compute_stage>
   const typename VariableValueType<OutputType, compute_stage>::type & adUDotNeighbor() const
   {
     return _neighbor_data->template adUDot<compute_stage>();
   }
 
-  /// element dots
-  const FieldVariableValue & uDot() const { return _element_data->uDot(); }
-  const FieldVariableValue & uDotDot() const { return _element_data->uDotDot(); }
-  const FieldVariableValue & uDotOld() const { return _element_data->uDotOld(); }
-  const FieldVariableValue & uDotDotOld() const { return _element_data->uDotDotOld(); }
-  const VariableValue & duDotDu() const { return _element_data->duDotDu(); }
-  const VariableValue & duDotDotDu() const { return _element_data->duDotDotDu(); }
-
-  /// neighbor solutions
-  const FieldVariableValue & slnNeighbor() const { return _neighbor_data->sln(Moose::Current); }
-  const FieldVariableValue & slnOldNeighbor() const { return _neighbor_data->sln(Moose::Old); }
-  const FieldVariableValue & slnOlderNeighbor() const { return _neighbor_data->sln(Moose::Older); }
-  const FieldVariableValue & slnPreviousNLNeighbor() const
-  {
-    return _neighbor_data->sln(Moose::PreviousNL);
-  }
-
-  /// neighbor solution gradients
-  const FieldVariableGradient & gradSlnNeighbor() const
-  {
-    return _neighbor_data->gradSln(Moose::Current);
-  }
-  const FieldVariableGradient & gradSlnOldNeighbor() const
-  {
-    return _neighbor_data->gradSln(Moose::Old);
-  }
-  const FieldVariableGradient & gradSlnOlderNeighbor() const
-  {
-    return _neighbor_data->gradSln(Moose::Older);
-  }
-  const FieldVariableGradient & gradSlnPreviousNLNeighbor() const
-  {
-    return _neighbor_data->gradSln(Moose::PreviousNL);
-  }
-
-  /// neighbor grad dots
-  const FieldVariableGradient & gradSlnNeighborDot() const { return _neighbor_data->gradSlnDot(); }
-  const FieldVariableGradient & gradSlnNeighborDotDot() const
-  {
-    return _neighbor_data->gradSlnDotDot();
-  }
-
-  /// neighbor solution seconds
-  const FieldVariableSecond & secondSlnNeighbor() const
-  {
-    return _neighbor_data->secondSln(Moose::Current);
-  }
-  const FieldVariableSecond & secondSlnOldNeighbor() const
-  {
-    return _neighbor_data->secondSln(Moose::Old);
-  }
-  const FieldVariableSecond & secondSlnOlderNeighbor() const
-  {
-    return _neighbor_data->secondSln(Moose::Older);
-  }
-  const FieldVariableSecond & secondSlnPreviousNLNeighbor() const
-  {
-    return _neighbor_data->secondSln(Moose::PreviousNL);
-  }
-
-  /// neighbor solution curls
-  const FieldVariableCurl & curlSlnNeighbor() const
-  {
-    return _neighbor_data->curlSln(Moose::Current);
-  }
-  const FieldVariableCurl & curlSlnOldNeighbor() const
-  {
-    return _neighbor_data->curlSln(Moose::Old);
-  }
-  const FieldVariableCurl & curlSlnOlderNeighbor() const
-  {
-    return _neighbor_data->curlSln(Moose::Older);
-  }
-
-  /// neighbor dots
-  const FieldVariableValue & uDotNeighbor() const { return _neighbor_data->uDot(); }
-  const FieldVariableValue & uDotDotNeighbor() const { return _neighbor_data->uDotDot(); }
-  const FieldVariableValue & uDotOldNeighbor() const { return _neighbor_data->uDotOld(); }
-  const FieldVariableValue & uDotDotOldNeighbor() const { return _neighbor_data->uDotDotOld(); }
-  const VariableValue & duDotDuNeighbor() const { return _neighbor_data->duDotDu(); }
-  const VariableValue & duDotDotDuNeighbor() const { return _neighbor_data->duDotDotDu(); }
-
-  */
   ///////////////// TODO: END of soln funcs to rewrite ////////////////////
 
   /// Actually compute variable values from the solution vectors
