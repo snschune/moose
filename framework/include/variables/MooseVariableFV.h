@@ -148,7 +148,18 @@ public:
   }
 
   ///////////////// TODO: START of soln funcs to rewrite ////////////////////
+  //
+  const FieldVariableValue & uDot() const { return _element_data->uDot(); }
+  const FieldVariableValue & sln() const { return _element_data->sln(Moose::Current); }
+  const FieldVariableGradient & gradSln() const { return _element_data->gradSln(Moose::Current); }
+  const FieldVariableValue & uDotNeighbor() const { return _neighbor_data->uDot(); }
+  const FieldVariableValue & slnNeighbor() const { return _neighbor_data->sln(Moose::Current); }
+  const FieldVariableGradient & gradSlnNeighbor() const
+  {
+    return _neighbor_data->gradSln(Moose::Current);
+  }
 
+  /*
   /// element solutions
   const FieldVariableValue & sln() const { return _element_data->sln(Moose::Current); }
   const FieldVariableValue & slnOld() const { return _element_data->sln(Moose::Old); }
@@ -314,6 +325,7 @@ public:
   const VariableValue & duDotDuNeighbor() const { return _neighbor_data->duDotDu(); }
   const VariableValue & duDotDotDuNeighbor() const { return _neighbor_data->duDotDotDu(); }
 
+  */
   ///////////////// TODO: END of soln funcs to rewrite ////////////////////
 
   /// Actually compute variable values from the solution vectors
@@ -365,7 +377,6 @@ public:
    */
   void addSolutionNeighbor(const DenseVector<Number> & v);
 
-  const DoFValue & dofValue();
   const DoFValue & dofValues();
   const DoFValue & dofValuesOld();
   const DoFValue & dofValuesOlder();
@@ -397,8 +408,7 @@ public:
    * Note: const monomial is always the case - higher order solns are
    * reconstructed - so this is simpler func than FE equivalent.
    */
-  OutputType getValue() const;
-  OutputType getValueNeighbor() const;
+  OutputType getValue(const Elem * elem) const;
 
   /**
    * Compute the variable gradient value at a point on an element
@@ -406,10 +416,7 @@ public:
    * @param phi Evaluated shape functions at a point
    * @return The variable gradient value
    */
-  typename OutputTools<OutputType>::OutputGradient getGradient(
-      const Elem * elem,
-      const std::vector<std::vector<typename OutputTools<OutputType>::OutputShapeGradient>> &
-          grad_phi) const;
+  typename OutputTools<OutputType>::OutputGradient getGradient(const Elem * elem) const;
 
 protected:
   /// Holder for all the data associated with the "main" element

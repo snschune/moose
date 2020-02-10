@@ -201,32 +201,6 @@ ComputeFVFaceResidualsThread<RangeType>::post()
 
 template <typename RangeType>
 void
-ComputeFVFaceResidualsThread<RangeType>::onBoundary(const FaceInfo & fi, BoundaryID bnd_id)
-{
-  std::vector<FVBoundaryCondition *> bcs;
-  _fe_problem.theWarehouse()
-      .query()
-      .condition<AttribSystem>("FVBC")
-      .condition<AttribBoundary>(bnd_id)
-      .queryInto(bcs);
-  if (bcs.size() == 0)
-    return;
-
-  _fe_problem.reinitElemFace(fi.leftElem(), fi.leftSide(), bnd_id, _tid);
-
-  // Set up Sentinel class so that, even if reinitMaterialsFace() throws, we
-  // still remember to swap back during stack unwinding.
-  SwapBackSentinel sentinel(_fe_problem, &FEProblem::swapBackMaterialsFace, _tid);
-
-  _fe_problem.reinitMaterialsFace(elem->subdomain_id(), _tid);
-  _fe_problem.reinitMaterialsBoundary(bnd_id, _tid);
-
-  for (const auto & bc : bcs)
-    bc->computeResidual();
-}
-
-template <typename RangeType>
-void
 ComputeFVFaceResidualsThread<RangeType>::onFace(const FaceInfo & fi)
 {
   std::vector<FVKernel *> kernels;
@@ -258,6 +232,32 @@ ComputeFVFaceResidualsThread<RangeType>::onFace(const FaceInfo & fi)
 
   for (const auto k : kernels)
     auto r = k->computeResidual();
+}
+
+template <typename RangeType>
+void
+ComputeFVFaceResidualsThread<RangeType>::onBoundary(const FaceInfo & fi, BoundaryID bnd_id)
+{
+  std::vector<FVBoundaryCondition *> bcs;
+  _fe_problem.theWarehouse()
+      .query()
+      .condition<AttribSystem>("FVBC")
+      .condition<AttribBoundary>(bnd_id)
+      .queryInto(bcs);
+  if (bcs.size() == 0)
+    return;
+
+  _fe_problem.reinitElemFace(fi.leftElem(), fi.leftSide(), bnd_id, _tid);
+
+  // Set up Sentinel class so that, even if reinitMaterialsFace() throws, we
+  // still remember to swap back during stack unwinding.
+  SwapBackSentinel sentinel(_fe_problem, &FEProblem::swapBackMaterialsFace, _tid);
+
+  _fe_problem.reinitMaterialsFace(elem->subdomain_id(), _tid);
+  _fe_problem.reinitMaterialsBoundary(bnd_id, _tid);
+
+  for (const auto & bc : bcs)
+    bc->computeResidual();
 }
 
 template <typename RangeType>

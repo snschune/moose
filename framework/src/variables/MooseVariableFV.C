@@ -89,52 +89,10 @@ MooseVariableFV<OutputType>::prepareFace()
 
 template <typename OutputType>
 void
-MooseVariableFV<OutputType>::reinitNode()
-{
-  _element_data->reinitNode();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::reinitNodes(const std::vector<dof_id_type> & nodes)
-{
-  _element_data->reinitNodes(nodes);
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::reinitNodesNeighbor(const std::vector<dof_id_type> & nodes)
-{
-  _neighbor_data->reinitNodes(nodes);
-}
-
-template <typename OutputType>
-void
 MooseVariableFV<OutputType>::getDofIndices(const Elem * elem,
                                            std::vector<dof_id_type> & dof_indices) const
 {
   _element_data->getDofIndices(elem, dof_indices);
-}
-
-template <typename OutputType>
-typename MooseVariableFV<OutputType>::OutputData
-MooseVariableFV<OutputType>::getNodalValue(const Node & node)
-{
-  return _element_data->getNodalValue(node, Moose::Current);
-}
-
-template <typename OutputType>
-typename MooseVariableFV<OutputType>::OutputData
-MooseVariableFV<OutputType>::getNodalValueOld(const Node & node)
-{
-  return _element_data->getNodalValue(node, Moose::Old);
-}
-
-template <typename OutputType>
-typename MooseVariableFV<OutputType>::OutputData
-MooseVariableFV<OutputType>::getNodalValueOlder(const Node & node)
-{
-  return _element_data->getNodalValue(node, Moose::Older);
 }
 
 template <typename OutputType>
@@ -184,14 +142,6 @@ void
 MooseVariableFV<OutputType>::addSolutionNeighbor(const DenseVector<Number> & v)
 {
   _neighbor_data->addSolution(_sys.solution(), v);
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::DoFValue &
-MooseVariableFV<OutputType>::dofValue()
-{
-  mooseDeprecated("Use dofValues instead of dofValue");
-  return dofValues();
 }
 
 template <typename OutputType>
@@ -375,57 +325,29 @@ MooseVariableFV<OutputType>::computeNeighborValues()
 
 template <typename OutputType>
 OutputType
-MooseVariableFV<OutputType>::getValue(const Elem * elem,
-                                      const std::vector<std::vector<OutputShape>> & phi) const
+MooseVariableFV<OutputType>::getValue(const Elem * elem) const
 {
   std::vector<dof_id_type> dof_indices;
   _dof_map.dof_indices(elem, dof_indices, _var_num);
-
-  OutputType value = 0;
-  if (isNodal())
-  {
-    for (unsigned int i = 0; i < dof_indices.size(); ++i)
-    {
-      // The zero index is because we only have one point that the phis are evaluated at
-      value += phi[i][0] * (*_sys.currentSolution())(dof_indices[i]);
-    }
-  }
-  else
-  {
-    mooseAssert(dof_indices.size() == 1, "Wrong size for dof indices");
-    value = (*_sys.currentSolution())(dof_indices[0]);
-  }
-
+  mooseAssert(dof_indices.size() == 1, "Wrong size for dof indices");
+  OutputType value = (*_sys.currentSolution())(dof_indices[0]);
   return value;
 }
 
 template <>
 RealEigenVector
-MooseVariableFV<RealEigenVector>::getValue(const Elem * elem,
-                                           const std::vector<std::vector<Real>> & phi) const
+MooseVariableFV<RealEigenVector>::getValue(const Elem * elem) const
 {
   std::vector<dof_id_type> dof_indices;
   _dof_map.dof_indices(elem, dof_indices, _var_num);
 
   RealEigenVector value(_count);
-  if (isNodal())
+  mooseAssert(dof_indices.size() == 1, "Wrong size for dof indices");
+  unsigned int n = 0;
+  for (unsigned int j = 0; j < _count; j++)
   {
-    for (unsigned int i = 0; i < dof_indices.size(); ++i)
-      for (unsigned int j = 0; j < _count; j++)
-      {
-        // The zero index is because we only have one point that the phis are evaluated at
-        value(j) += phi[i][0] * (*_sys.currentSolution())(dof_indices[i] + j);
-      }
-  }
-  else
-  {
-    mooseAssert(dof_indices.size() == 1, "Wrong size for dof indices");
-    unsigned int n = 0;
-    for (unsigned int j = 0; j < _count; j++)
-    {
-      value(j) = (*_sys.currentSolution())(dof_indices[0] + n);
-      n += _dof_indices.size();
-    }
+    value(j) = (*_sys.currentSolution())(dof_indices[0] + n);
+    n += _dof_indices.size();
   }
 
   return value;
@@ -433,30 +355,9 @@ MooseVariableFV<RealEigenVector>::getValue(const Elem * elem,
 
 template <typename OutputType>
 typename OutputTools<OutputType>::OutputGradient
-MooseVariableFV<OutputType>::getGradient(
-    const Elem * elem,
-    const std::vector<std::vector<typename OutputTools<OutputType>::OutputShapeGradient>> &
-        grad_phi) const
+MooseVariableFV<OutputType>::getGradient(const Elem * elem) const
 {
-  std::vector<dof_id_type> dof_indices;
-  _dof_map.dof_indices(elem, dof_indices, _var_num);
-
-  typename OutputTools<OutputType>::OutputGradient value;
-  if (isNodal())
-  {
-    for (unsigned int i = 0; i < dof_indices.size(); ++i)
-    {
-      // The zero index is because we only have one point that the phis are evaluated at
-      value += grad_phi[i][0] * (*_sys.currentSolution())(dof_indices[i]);
-    }
-  }
-  else
-  {
-    mooseAssert(dof_indices.size() == 1, "Wrong size for dof indices");
-    value = 0.0;
-  }
-
-  return value;
+  return 0;
 }
 
 template <>
@@ -487,118 +388,6 @@ MooseVariableFV<RealEigenVector>::getGradient(
 }
 
 template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValue()
-{
-  return _element_data->nodalValue(Moose::Current);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueNeighbor()
-{
-  return _neighbor_data->nodalValue(Moose::Current);
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::DoFValue &
-MooseVariableFV<OutputType>::nodalVectorTagValue(TagID tag)
-{
-  return _element_data->nodalVectorTagValue(tag);
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::DoFValue &
-MooseVariableFV<OutputType>::nodalMatrixTagValue(TagID tag)
-{
-  return _element_data->nodalMatrixTagValue(tag);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueOld()
-{
-  return _element_data->nodalValue(Moose::Old);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueOldNeighbor()
-{
-  return _neighbor_data->nodalValue(Moose::Old);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueOlder()
-{
-  return _element_data->nodalValue(Moose::Older);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueOlderNeighbor()
-{
-  return _neighbor_data->nodalValue(Moose::Older);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValuePreviousNL()
-{
-  return _element_data->nodalValue(Moose::PreviousNL);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValuePreviousNLNeighbor()
-{
-  return _neighbor_data->nodalValue(Moose::PreviousNL);
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueDot()
-{
-  return _element_data->nodalValueDot();
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueDotDot()
-{
-  return _element_data->nodalValueDotDot();
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueDotOld()
-{
-  return _element_data->nodalValueDotOld();
-}
-
-template <typename OutputType>
-const OutputType &
-MooseVariableFV<OutputType>::nodalValueDotDotOld()
-{
-  return _element_data->nodalValueDotDotOld();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::computeNodalValues()
-{
-  _element_data->computeNodalValues();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::computeNodalNeighborValues()
-{
-  _neighbor_data->computeNodalValues();
-}
-
-template <typename OutputType>
 void
 MooseVariableFV<OutputType>::setDofValue(const OutputData & value, unsigned int index)
 {
@@ -610,21 +399,6 @@ void
 MooseVariableFV<OutputType>::setDofValues(const DenseVector<OutputData> & values)
 {
   _element_data->setDofValues(values);
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::setNodalValue(const OutputType & value, unsigned int idx)
-{
-  _element_data->setNodalValue(value, idx);
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::insertNodalValue(NumericVector<Number> & residual,
-                                              const OutputData & v)
-{
-  _element_data->insertNodalValue(residual, v);
 }
 
 template <typename OutputType>
@@ -709,20 +483,6 @@ bool
 MooseVariableFV<OutputType>::computingCurl() const
 {
   return _element_data->computingCurl();
-}
-
-template <typename OutputType>
-bool
-MooseVariableFV<OutputType>::isNodalDefined() const
-{
-  return _element_data->isNodalDefined();
-}
-
-template <typename OutputType>
-bool
-MooseVariableFV<OutputType>::isNodalNeighborDefined() const
-{
-  return _neighbor_data->isNodalDefined();
 }
 
 template class MooseVariableFV<Real>;
