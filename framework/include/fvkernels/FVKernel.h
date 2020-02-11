@@ -1,10 +1,23 @@
 #pragma once
 
+#include "MooseObject.h"
+#include "TaggingInterface.h"
+#include "TransientInterface.h"
+#include "BlockRestrictable.h"
+#include "NeighborCoupleable.h"
+#include "TwoMaterialPropertyInterface.h"
+#include "NeighborMooseVariableInterface.h"
+#include "NeighborCoupleableMooseVariableDependencyIntermediateInterface.h"
+
+class FaceInfo;
+
 class FVFluxKernel : public MooseObject,
                      public TaggingInterface,
                      public TransientInterface,
-                     public NeighborCoupleable,
-                     public TwoMaterialPropertyInterface
+                     public BlockRestrictable,
+                     public TwoMaterialPropertyInterface,
+                     public NeighborCoupleableMooseVariableDependencyIntermediateInterface,
+                     public NeighborMooseVariableInterface<Real>
 {
 public:
   FVFluxKernel(const InputParameters & params);
@@ -21,6 +34,8 @@ protected:
   virtual Real computeQpResidual(const FaceInfo & fi) = 0;
 
   MooseVariable & _var;
+  THREAD_ID _tid;
+  Assembly & _assembly;
 
   const VariableValue & _u_left;
   const VariableValue & _u_right;
