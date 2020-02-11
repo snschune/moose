@@ -1527,21 +1527,12 @@ MooseVariableDataFV<RealEigenVector>::insert(NumericVector<Number> & residual)
 {
   if (_has_dof_values)
   {
-    if (isNodal())
+    unsigned int n = 0;
+    for (unsigned int j = 0; j < _count; ++j)
     {
       for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-        for (unsigned int j = 0; j < _count; ++j)
-          residual.set(_dof_indices[i] + j, _dof_values[i](j));
-    }
-    else
-    {
-      unsigned int n = 0;
-      for (unsigned int j = 0; j < _count; ++j)
-      {
-        for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-          residual.set(_dof_indices[i] + n, _dof_values[i](j));
-        n += _dof_indices.size();
-      }
+        residual.set(_dof_indices[i] + n, _dof_values[i](j));
+      n += _dof_indices.size();
     }
   }
 }
@@ -1560,21 +1551,12 @@ MooseVariableDataFV<RealEigenVector>::add(NumericVector<Number> & residual)
 {
   if (_has_dof_values)
   {
-    if (isNodal())
+    unsigned int n = 0;
+    for (unsigned int j = 0; j < _count; ++j)
     {
       for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-        for (unsigned int j = 0; j < _count; ++j)
-          residual.add(_dof_indices[i] + j, _dof_values[i](j));
-    }
-    else
-    {
-      unsigned int n = 0;
-      for (unsigned int j = 0; j < _count; ++j)
-      {
-        for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-          residual.add(_dof_indices[i] + n, _dof_values[i](j));
-        n += _dof_indices.size();
-      }
+        residual.add(_dof_indices[i] + n, _dof_values[i](j));
+      n += _dof_indices.size();
     }
   }
 }
@@ -1738,27 +1720,15 @@ MooseVariableDataFV<RealEigenVector>::computeIncrementAtQps(
   _increment.resize(nqp);
   // Compute the increment at each quadrature point
   unsigned int num_dofs = _dof_indices.size();
-  if (isNodal())
+  for (unsigned int qp = 0; qp < nqp; qp++)
   {
-    for (unsigned int qp = 0; qp < nqp; qp++)
-    {
+    unsigned int n = 0;
+    for (unsigned int j = 0; j < _count; j++)
       for (unsigned int i = 0; i < num_dofs; i++)
-        for (unsigned int j = 0; j < _count; j++)
-          _increment[qp](j) += (*_phi)[i][qp] * increment_vec(_dof_indices[i] + j);
-    }
-  }
-  else
-  {
-    for (unsigned int qp = 0; qp < nqp; qp++)
-    {
-      unsigned int n = 0;
-      for (unsigned int j = 0; j < _count; j++)
-        for (unsigned int i = 0; i < num_dofs; i++)
-        {
-          _increment[qp](j) += (*_phi)[i][qp] * increment_vec(_dof_indices[i] + n);
-          n += num_dofs;
-        }
-    }
+      {
+        _increment[qp](j) += (*_phi)[i][qp] * increment_vec(_dof_indices[i] + n);
+        n += num_dofs;
+      }
   }
 }
 
@@ -2011,27 +1981,14 @@ MooseVariableDataFV<OutputType>::getArrayDoFValues(const NumericVector<Number> &
                                                    MooseArray<RealEigenVector> & dof_values) const
 {
   dof_values.resize(n);
-  if (isNodal())
+  for (unsigned int i = 0; i < n; ++i)
   {
-    for (unsigned int i = 0; i < n; ++i)
+    dof_values[i].resize(_count);
+    auto dof = _dof_indices[i];
+    for (unsigned int j = 0; j < _count; ++j)
     {
-      dof_values[i].resize(_count);
-      auto dof = _dof_indices[i];
-      for (unsigned int j = 0; j < _count; ++j)
-        dof_values[i](j) = sol(dof++);
-    }
-  }
-  else
-  {
-    for (unsigned int i = 0; i < n; ++i)
-    {
-      dof_values[i].resize(_count);
-      auto dof = _dof_indices[i];
-      for (unsigned int j = 0; j < _count; ++j)
-      {
-        dof_values[i](j) = sol(dof);
-        dof += n;
-      }
+      dof_values[i](j) = sol(dof);
+      dof += n;
     }
   }
 }

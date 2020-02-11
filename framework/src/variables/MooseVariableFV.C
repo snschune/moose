@@ -357,34 +357,7 @@ template <typename OutputType>
 typename OutputTools<OutputType>::OutputGradient
 MooseVariableFV<OutputType>::getGradient(const Elem * elem) const
 {
-  return 0;
-}
-
-template <>
-RealVectorArrayValue
-MooseVariableFV<RealEigenVector>::getGradient(
-    const Elem * elem, const std::vector<std::vector<RealVectorValue>> & grad_phi) const
-{
-  std::vector<dof_id_type> dof_indices;
-  _dof_map.dof_indices(elem, dof_indices, _var_num);
-
-  RealVectorArrayValue value(_count, LIBMESH_DIM);
-  if (isNodal())
-  {
-    for (unsigned int i = 0; i < dof_indices.size(); ++i)
-      for (unsigned int j = 0; j < _count; ++j)
-        for (unsigned int k = 0; k < LIBMESH_DIM; ++k)
-        {
-          // The zero index is because we only have one point that the phis are evaluated at
-          value(j, k) += grad_phi[i][0](k) * (*_sys.currentSolution())(dof_indices[i] + j);
-        }
-  }
-  else
-  {
-    mooseAssert(dof_indices.size() == 1, "Wrong size for dof indices");
-  }
-
-  return value;
+  return {};
 }
 
 template <typename OutputType>
@@ -406,83 +379,6 @@ bool
 MooseVariableFV<OutputType>::isVector() const
 {
   return std::is_same<OutputType, RealVectorValue>::value;
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiSecond &
-MooseVariableFV<OutputType>::secondPhi() const
-{
-  return _element_data->secondPhi();
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiCurl &
-MooseVariableFV<OutputType>::curlPhi() const
-{
-  return _element_data->curlPhi();
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiSecond &
-MooseVariableFV<OutputType>::secondPhiFace() const
-{
-  return _element_data->secondPhiFace();
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiCurl &
-MooseVariableFV<OutputType>::curlPhiFace() const
-{
-  return _element_data->curlPhiFace();
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiSecond &
-MooseVariableFV<OutputType>::secondPhiNeighbor() const
-{
-  return _neighbor_data->secondPhi();
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiCurl &
-MooseVariableFV<OutputType>::curlPhiNeighbor() const
-{
-  return _neighbor_data->curlPhi();
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiSecond &
-MooseVariableFV<OutputType>::secondPhiFaceNeighbor() const
-{
-  return _neighbor_data->secondPhiFace();
-}
-
-template <typename OutputType>
-const typename MooseVariableFV<OutputType>::FieldVariablePhiCurl &
-MooseVariableFV<OutputType>::curlPhiFaceNeighbor() const
-{
-  return _neighbor_data->curlPhiFace();
-}
-
-template <typename OutputType>
-bool
-MooseVariableFV<OutputType>::usesSecondPhi() const
-{
-  return _element_data->usesSecondPhi();
-}
-
-template <typename OutputType>
-bool
-MooseVariableFV<OutputType>::usesSecondPhiNeighbor() const
-{
-  return _neighbor_data->usesSecondPhi();
-}
-
-template <typename OutputType>
-bool
-MooseVariableFV<OutputType>::computingCurl() const
-{
-  return _element_data->computingCurl();
 }
 
 template class MooseVariableFV<Real>;

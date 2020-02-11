@@ -52,44 +52,23 @@ template <typename OutputType>
 class MooseVariableFV : public MooseVariableFVBase
 {
 public:
-  // type for gradient, second and divergence of template class OutputType
-  typedef typename TensorTools::IncrementRank<OutputType>::type OutputGradient;
-  typedef typename TensorTools::IncrementRank<OutputGradient>::type OutputSecond;
-  typedef typename TensorTools::DecrementRank<OutputType>::type OutputDivergence;
+  using OutputGradient = MooseVariableData::OutputGradient;
+  using OutputSecond = MooseVariableData::OutputSecond;
+  using OutputDivergence = MooseVariableData::OutputDivergence;
 
-  // shortcut for types storing values on quadrature points
-  typedef MooseArray<OutputType> FieldVariableValue;
-  typedef MooseArray<OutputGradient> FieldVariableGradient;
-  typedef MooseArray<OutputSecond> FieldVariableSecond;
-  typedef MooseArray<OutputType> FieldVariableCurl;
-  typedef MooseArray<OutputDivergence> FieldVariableDivergence;
+  using FieldVariableValue = MooseVariableData::FieldVariableValue;
+  using FieldVariableGradient = MooseVariableData::FieldVariableGradient;
+  using FieldVariableSecond = MooseVariableData::FieldVariableSecond;
+  using FieldVariableCurl = MooseVariableData::FieldVariableCurl;
+  using FieldVariableDivergence = MooseVariableData::FieldVariableDivergence;
 
-  // shape function type for the template class OutputType
-  typedef typename Moose::ShapeType<OutputType>::type OutputShape;
+  using OutputShape = MooseVariableData::OutputShape;
+  using OutputShapeGradient = MooseVariableData::OutputShapeGradient;
+  using OutputShapeSecond = MooseVariableData::OutputShapeSecond;
+  using OutputShapeDivergence = MooseVariableData::OutputShapeDivergence;
 
-  // type for gradient, second and divergence of shape functions of template class OutputType
-  typedef typename TensorTools::IncrementRank<OutputShape>::type OutputShapeGradient;
-  typedef typename TensorTools::IncrementRank<OutputShapeGradient>::type OutputShapeSecond;
-  typedef typename TensorTools::DecrementRank<OutputShape>::type OutputShapeDivergence;
-
-  // shortcut for types storing shape function values on quadrature points
-  typedef MooseArray<std::vector<OutputShape>> FieldVariablePhiValue;
-  typedef MooseArray<std::vector<OutputShapeGradient>> FieldVariablePhiGradient;
-  typedef MooseArray<std::vector<OutputShapeSecond>> FieldVariablePhiSecond;
-  typedef MooseArray<std::vector<OutputShape>> FieldVariablePhiCurl;
-  typedef MooseArray<std::vector<OutputShapeDivergence>> FieldVariablePhiDivergence;
-
-  // shortcut for types storing test function values on quadrature points
-  // Note: here we assume the types are the same as of shape functions.
-  typedef MooseArray<std::vector<OutputShape>> FieldVariableTestValue;
-  typedef MooseArray<std::vector<OutputShapeGradient>> FieldVariableTestGradient;
-  typedef MooseArray<std::vector<OutputShapeSecond>> FieldVariableTestSecond;
-  typedef MooseArray<std::vector<OutputShape>> FieldVariableTestCurl;
-  typedef MooseArray<std::vector<OutputShapeDivergence>> FieldVariableTestDivergence;
-
-  // DoF value type for the template class OutputType
-  typedef typename Moose::DOFType<OutputType>::type OutputData;
-  typedef MooseArray<OutputData> DoFValue;
+  using OutputData = MooseVariableData::OutputData;
+  using DoFValue = MooseVariableData::DoFValue;
 
   MooseVariableFV(const InputParameters & parameters);
 
@@ -99,18 +78,6 @@ public:
   void prepareFace() override;
 
   virtual void prepareIC() override;
-
-  /**
-   * Whether or not this variable is computing any second derivatives.
-   */
-  bool computingSecond() const
-  { /* TODO;*/
-  }
-
-  /**
-   * Whether or not this variable is computing the curl
-   */
-  bool computingCurl() const;
 
   const std::set<SubdomainID> & activeSubdomains() const override;
   bool activeOnSubdomain(SubdomainID subdomain) const override;
