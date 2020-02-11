@@ -73,11 +73,6 @@ public:
   void computeValues();
 
   /**
-   * compute the values for const monomial variables
-   */
-  void computeMonomialValues();
-
-  /**
    * compute AD things
    */
   void computeAD(const unsigned int num_dofs, const unsigned int nqp);
