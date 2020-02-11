@@ -81,12 +81,6 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFE<Outpu
     _has_dof_values(false),
     _qrule(qrule_in),
     _qrule_face(qrule_face_in),
-    _second_phi_assembly_method(nullptr),
-    _second_phi_face_assembly_method(nullptr),
-    _curl_phi_assembly_method(nullptr),
-    _curl_phi_face_assembly_method(nullptr),
-    _ad_grad_phi_assembly_method(nullptr),
-    _ad_grad_phi_face_assembly_method(nullptr),
     _time_integrator(nullptr),
     _node(node),
     _elem(elem),
@@ -120,63 +114,6 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFE<Outpu
   _matrix_tag_u.resize(num_matrix_tags);
 
   _time_integrator = _sys.getTimeIntegrator();
-
-  // These MooseArray objects are used by AuxKernelBase for nodal AuxKernel objects, hence the size
-  // size is always 1 (i.e, nodal kernels work with _qp=0 only).
-  _nodal_value_array.resize(1);
-  _nodal_value_old_array.resize(1);
-  _nodal_value_older_array.resize(1);
-
-  switch (_element_type)
-  {
-    case Moose::ElementType::Element:
-    {
-      _phi_assembly_method = &Assembly::fePhi<OutputType>;
-      _phi_face_assembly_method = &Assembly::fePhiFace<OutputType>;
-      _grad_phi_assembly_method = &Assembly::feGradPhi<OutputType>;
-      _grad_phi_face_assembly_method = &Assembly::feGradPhiFace<OutputType>;
-      _second_phi_assembly_method = &Assembly::feSecondPhi<OutputType>;
-      _second_phi_face_assembly_method = &Assembly::feSecondPhiFace<OutputType>;
-      _curl_phi_assembly_method = &Assembly::feCurlPhi<OutputType>;
-      _curl_phi_face_assembly_method = &Assembly::feCurlPhiFace<OutputType>;
-      _ad_grad_phi_assembly_method = &Assembly::feADGradPhi<OutputType>;
-      _ad_grad_phi_face_assembly_method = &Assembly::feADGradPhiFace<OutputType>;
-
-      _ad_grad_phi = &_ad_grad_phi_assembly_method(_assembly, _fe_type);
-      _ad_grad_phi_face = &_ad_grad_phi_face_assembly_method(_assembly, _fe_type);
-      break;
-    }
-    case Moose::ElementType::Neighbor:
-    {
-      _phi_assembly_method = &Assembly::fePhiNeighbor<OutputType>;
-      _phi_face_assembly_method = &Assembly::fePhiFaceNeighbor<OutputType>;
-      _grad_phi_assembly_method = &Assembly::feGradPhiNeighbor<OutputType>;
-      _grad_phi_face_assembly_method = &Assembly::feGradPhiFaceNeighbor<OutputType>;
-      _second_phi_assembly_method = &Assembly::feSecondPhiNeighbor<OutputType>;
-      _second_phi_face_assembly_method = &Assembly::feSecondPhiFaceNeighbor<OutputType>;
-      _curl_phi_assembly_method = &Assembly::feCurlPhiNeighbor<OutputType>;
-      _curl_phi_face_assembly_method = &Assembly::feCurlPhiFaceNeighbor<OutputType>;
-
-      _ad_grad_phi = nullptr;
-      _ad_grad_phi_face = nullptr;
-      break;
-    }
-    case Moose::ElementType::Lower:
-    {
-      _phi_assembly_method = &Assembly::fePhiLower<OutputType>;
-      _phi_face_assembly_method = &Assembly::fePhiLower<OutputType>; // Place holder
-      _grad_phi_assembly_method = &Assembly::feGradPhiLower<OutputType>;
-      _grad_phi_face_assembly_method = &Assembly::feGradPhiLower<OutputType>; // Place holder
-
-      _ad_grad_phi = nullptr;
-      _ad_grad_phi_face = nullptr;
-      break;
-    }
-  }
-  _phi = &_phi_assembly_method(_assembly, _fe_type);
-  _phi_face = &_phi_face_assembly_method(_assembly, _fe_type);
-  _grad_phi = &_grad_phi_assembly_method(_assembly, _fe_type);
-  _grad_phi_face = &_grad_phi_face_assembly_method(_assembly, _fe_type);
 }
 
 template <typename OutputType>
@@ -187,22 +124,12 @@ MooseVariableDataFV<OutputType>::setGeometry(Moose::GeometryType gm_type)
   {
     case Moose::Volume:
     {
-      _current_qrule = _qrule;
-      _current_phi = _phi;
-      _current_grad_phi = _grad_phi;
-      _current_second_phi = _second_phi;
-      _current_curl_phi = _curl_phi;
-      _current_ad_grad_phi = _ad_grad_phi;
+      // TODO: set integration multiplier to cell volume
       break;
     }
     case Moose::Face:
     {
-      _current_qrule = _qrule_face;
-      _current_phi = _phi_face;
-      _current_grad_phi = _grad_phi_face;
-      _current_second_phi = _second_phi_face;
-      _current_curl_phi = _curl_phi_face;
-      _current_ad_grad_phi = _ad_grad_phi_face;
+      // TODO: set integration multiplier to face area
       break;
     }
   }
@@ -432,38 +359,6 @@ MooseVariableDataFV<OutputType>::curlSln(Moose::SolutionState state) const
     default:
       mooseError("We don't currently support curl from the previous non-linear iteration");
   }
-}
-
-template <typename OutputType>
-const typename MooseVariableDataFV<OutputType>::FieldVariablePhiSecond &
-MooseVariableDataFV<OutputType>::secondPhi() const
-{
-  _second_phi = &_second_phi_assembly_method(_assembly, _fe_type);
-  return *_second_phi;
-}
-
-template <typename OutputType>
-const typename MooseVariableDataFV<OutputType>::FieldVariablePhiSecond &
-MooseVariableDataFV<OutputType>::secondPhiFace() const
-{
-  _second_phi_face = &_second_phi_face_assembly_method(_assembly, _fe_type);
-  return *_second_phi_face;
-}
-
-template <typename OutputType>
-const typename MooseVariableDataFV<OutputType>::FieldVariablePhiCurl &
-MooseVariableDataFV<OutputType>::curlPhi() const
-{
-  _curl_phi = &_curl_phi_assembly_method(_assembly, _fe_type);
-  return *_curl_phi;
-}
-
-template <typename OutputType>
-const typename MooseVariableDataFV<OutputType>::FieldVariablePhiCurl &
-MooseVariableDataFV<OutputType>::curlPhiFace() const
-{
-  _curl_phi_face = &_curl_phi_face_assembly_method(_assembly, _fe_type);
-  return *_curl_phi_face;
 }
 
 template <typename OutputType>
@@ -745,322 +640,6 @@ MooseVariableDataFV<OutputType>::computeValues()
     computeAD(num_dofs, nqp);
 }
 
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::computeValues()
-{
-  unsigned int num_dofs = _dof_indices.size();
-
-  if (num_dofs > 0)
-    fetchDoFValues();
-
-  bool is_transient = _subproblem.isTransient();
-  unsigned int nqp = _current_qrule->n_points();
-  auto && active_coupleable_vector_tags =
-      _sys.subproblem().getActiveFEVariableCoupleableVectorTags(_tid);
-  auto && active_coupleable_matrix_tags =
-      _sys.subproblem().getActiveFEVariableCoupleableMatrixTags(_tid);
-
-  // Map grad_phi using Eigen so that we can perform array operations easier
-  if (_qrule == _current_qrule)
-  {
-    _mapped_grad_phi.resize(num_dofs);
-    for (unsigned int i = 0; i < num_dofs; i++)
-    {
-      _mapped_grad_phi[i].resize(nqp, Eigen::Map<RealDIMValue>(nullptr));
-      for (unsigned int qp = 0; qp < nqp; qp++)
-        // Note: this does NOT do any allocation.  It is "reconstructing" the object in place
-        new (&_mapped_grad_phi[i][qp])
-            Eigen::Map<RealDIMValue>(const_cast<Real *>(&(*_current_grad_phi)[i][qp](0)));
-    }
-  }
-  else
-  {
-    _mapped_grad_phi_face.resize(num_dofs);
-    for (unsigned int i = 0; i < num_dofs; i++)
-    {
-      _mapped_grad_phi_face[i].resize(nqp, Eigen::Map<RealDIMValue>(nullptr));
-      for (unsigned int qp = 0; qp < nqp; qp++)
-        // Note: this does NOT do any allocation.  It is "reconstructing" the object in place
-        new (&_mapped_grad_phi_face[i][qp])
-            Eigen::Map<RealDIMValue>(const_cast<Real *>(&(*_current_grad_phi)[i][qp](0)));
-    }
-  }
-
-  _u.resize(nqp);
-  _grad_u.resize(nqp);
-
-  for (auto tag : active_coupleable_vector_tags)
-    if (_need_vector_tag_u[tag])
-      _vector_tag_u[tag].resize(nqp);
-
-  for (auto tag : active_coupleable_matrix_tags)
-    if (_need_matrix_tag_u[tag])
-      _matrix_tag_u[tag].resize(nqp);
-
-  if (_need_second)
-    _second_u.resize(nqp);
-
-  if (_need_curl)
-    _curl_u.resize(nqp);
-
-  if (_need_u_previous_nl)
-    _u_previous_nl.resize(nqp);
-
-  if (_need_grad_previous_nl)
-    _grad_u_previous_nl.resize(nqp);
-
-  if (_need_second_previous_nl)
-    _second_u_previous_nl.resize(nqp);
-
-  if (is_transient)
-  {
-    if (_need_u_dot)
-      _u_dot.resize(nqp);
-
-    if (_need_u_dotdot)
-      _u_dotdot.resize(nqp);
-
-    if (_need_u_dot_old)
-      _u_dot_old.resize(nqp);
-
-    if (_need_u_dotdot_old)
-      _u_dotdot_old.resize(nqp);
-
-    if (_need_du_dot_du)
-      _du_dot_du.resize(nqp);
-
-    if (_need_du_dotdot_du)
-      _du_dotdot_du.resize(nqp);
-
-    if (_need_grad_dot)
-      _grad_u_dot.resize(nqp);
-
-    if (_need_grad_dotdot)
-      _grad_u_dotdot.resize(nqp);
-
-    if (_need_u_old)
-      _u_old.resize(nqp);
-
-    if (_need_u_older)
-      _u_older.resize(nqp);
-
-    if (_need_grad_old)
-      _grad_u_old.resize(nqp);
-
-    if (_need_grad_older)
-      _grad_u_older.resize(nqp);
-
-    if (_need_second_old)
-      _second_u_old.resize(nqp);
-
-    if (_need_curl_old)
-      _curl_u_old.resize(nqp);
-
-    if (_need_second_older)
-      _second_u_older.resize(nqp);
-  }
-
-  for (unsigned int i = 0; i < nqp; ++i)
-  {
-    _u[i].setZero(_count);
-    _grad_u[i].setZero(_count, LIBMESH_DIM);
-
-    for (auto tag : active_coupleable_vector_tags)
-      if (_need_vector_tag_u[tag])
-        _vector_tag_u[tag][i].setZero(_count);
-
-    for (auto tag : active_coupleable_matrix_tags)
-      if (_need_matrix_tag_u[tag])
-        _matrix_tag_u[tag][i].setZero(_count);
-
-    if (_need_second)
-      _second_u[i].setZero(_count, LIBMESH_DIM * LIBMESH_DIM);
-
-    if (_need_curl)
-      _curl_u[i].setZero(_count);
-
-    if (_need_u_previous_nl)
-      _u_previous_nl[i].setZero(_count);
-
-    if (_need_grad_previous_nl)
-      _grad_u_previous_nl[i].setZero(_count, LIBMESH_DIM);
-
-    if (_need_second_previous_nl)
-      _second_u_previous_nl[i].setZero(_count, LIBMESH_DIM * LIBMESH_DIM);
-
-    if (is_transient)
-    {
-      if (_need_u_dot)
-        _u_dot[i].setZero(_count);
-
-      if (_need_u_dotdot)
-        _u_dotdot[i].setZero(_count);
-
-      if (_need_u_dot_old)
-        _u_dot_old[i].setZero(_count);
-
-      if (_need_u_dotdot_old)
-        _u_dotdot_old[i].setZero(_count);
-
-      if (_need_du_dot_du)
-        _du_dot_du[i] = 0;
-
-      if (_need_du_dotdot_du)
-        _du_dotdot_du[i] = 0;
-
-      if (_need_grad_dot)
-        _grad_u_dot[i].setZero(_count, LIBMESH_DIM);
-
-      if (_need_grad_dotdot)
-        _grad_u_dotdot[i].setZero(_count, LIBMESH_DIM);
-
-      if (_need_u_old)
-        _u_old[i].setZero(_count);
-
-      if (_need_u_older)
-        _u_older[i].setZero(_count);
-
-      if (_need_grad_old)
-        _grad_u_old[i].setZero(_count, LIBMESH_DIM);
-
-      if (_need_grad_older)
-        _grad_u_older[i].setZero(_count, LIBMESH_DIM);
-
-      if (_need_second_old)
-        _second_u_old[i].setZero(_count, LIBMESH_DIM * LIBMESH_DIM);
-
-      if (_need_second_older)
-        _second_u_older[i].setZero(_count, LIBMESH_DIM * LIBMESH_DIM);
-
-      if (_need_curl_old)
-        _curl_u_old[i].setZero(_count);
-    }
-  }
-
-  bool second_required =
-      _need_second || _need_second_old || _need_second_older || _need_second_previous_nl;
-  bool curl_required = _need_curl || _need_curl_old;
-
-  for (unsigned int i = 0; i < num_dofs; i++)
-  {
-    for (unsigned int qp = 0; qp < nqp; qp++)
-    {
-      const OutputShape phi_local = (*_current_phi)[i][qp];
-      const OutputShapeGradient dphi_qp = (*_current_grad_phi)[i][qp];
-
-      _u[qp] += phi_local * _dof_values[i];
-
-      for (unsigned int d = 0; d < LIBMESH_DIM; ++d)
-        _grad_u[qp].col(d) += dphi_qp(d) * _dof_values[i];
-
-      if (is_transient)
-      {
-        if (_need_u_old)
-          _u_old[qp] += phi_local * _dof_values_old[i];
-
-        if (_need_u_older)
-          _u_older[qp] += phi_local * _dof_values_older[i];
-
-        if (_need_grad_old)
-          for (unsigned int d = 0; d < LIBMESH_DIM; ++d)
-            _grad_u_old[qp].col(d) += dphi_qp(d) * _dof_values_old[i];
-
-        if (_need_grad_older)
-          for (unsigned int d = 0; d < LIBMESH_DIM; ++d)
-            _grad_u_older[qp].col(d) += dphi_qp(d) * _dof_values_older[i];
-
-        if (_need_u_dot)
-          _u_dot[qp] += phi_local * _dof_values_dot[i];
-
-        if (_need_u_dotdot)
-          _u_dotdot[qp] += phi_local * _dof_values_dotdot[i];
-
-        if (_need_u_dot_old)
-          _u_dot_old[qp] += phi_local * _dof_values_dot_old[i];
-
-        if (_need_u_dotdot_old)
-          _u_dotdot_old[qp] += phi_local * _dof_values_dotdot_old[i];
-
-        if (_need_grad_dot)
-          for (unsigned int d = 0; d < LIBMESH_DIM; ++d)
-            _grad_u_dot[qp].col(d) += dphi_qp(d) * _dof_values_dot[i];
-
-        if (_need_grad_dotdot)
-          for (unsigned int d = 0; d < LIBMESH_DIM; ++d)
-            _grad_u_dotdot[qp].col(d) += dphi_qp(d) * _dof_values_dotdot[i];
-
-        if (_need_du_dot_du)
-          _du_dot_du[qp] = _dof_du_dot_du[i];
-
-        if (_need_du_dotdot_du)
-          _du_dotdot_du[qp] = _dof_du_dotdot_du[i];
-      }
-
-      if (second_required)
-      {
-        mooseAssert(
-            _current_second_phi,
-            "We're requiring a second calculation but have not set a second shape function!");
-        const RealTensorValue d2phi_local = (*_current_second_phi)[i][qp];
-
-        if (_need_second)
-          for (unsigned int d = 0, d1 = 0; d1 < LIBMESH_DIM; ++d1)
-            for (unsigned int d2 = 0; d2 < LIBMESH_DIM; ++d2)
-              _second_u[qp].col(d++) += d2phi_local(d1, d2) * _dof_values[i];
-
-        if (_need_second_previous_nl)
-          for (unsigned int d = 0, d1 = 0; d1 < LIBMESH_DIM; ++d1)
-            for (unsigned int d2 = 0; d2 < LIBMESH_DIM; ++d2)
-              _second_u_previous_nl[qp].col(d++) +=
-                  d2phi_local(d1, d2) * _dof_values_previous_nl[i];
-
-        if (is_transient)
-        {
-          if (_need_second_old)
-            for (unsigned int d = 0, d1 = 0; d1 < LIBMESH_DIM; ++d1)
-              for (unsigned int d2 = 0; d2 < LIBMESH_DIM; ++d2)
-                _second_u_old[qp].col(d++) += d2phi_local(d1, d2) * _dof_values_old[i];
-
-          if (_need_second_older)
-            for (unsigned int d = 0, d1 = 0; d1 < LIBMESH_DIM; ++d1)
-              for (unsigned int d2 = 0; d2 < LIBMESH_DIM; ++d2)
-                _second_u_older[qp].col(d++) += d2phi_local(d1, d2) * _dof_values_older[i];
-        }
-      }
-
-      if (curl_required)
-      {
-        mooseAssert(_current_curl_phi,
-                    "We're requiring a curl calculation but have not set a curl shape function!");
-        const auto curl_phi_local = (*_current_curl_phi)[i][qp];
-
-        if (_need_curl)
-          _curl_u[qp] += curl_phi_local * _dof_values[i];
-
-        if (is_transient && _need_curl_old)
-          _curl_u_old[qp] += curl_phi_local * _dof_values_old[i];
-      }
-
-      for (auto tag : active_coupleable_vector_tags)
-        if (_need_vector_tag_u[tag])
-          _vector_tag_u[tag][qp] += phi_local * _vector_tags_dof_u[tag][i];
-
-      for (auto tag : active_coupleable_matrix_tags)
-        if (_need_matrix_tag_u[tag])
-          _matrix_tag_u[tag][qp] += phi_local * _matrix_tags_dof_u[tag][i];
-
-      if (_need_u_previous_nl)
-        _u_previous_nl[qp] += phi_local * _dof_values_previous_nl[i];
-
-      if (_need_grad_previous_nl)
-        for (unsigned int d = 0; d < LIBMESH_DIM; ++d)
-          _grad_u_previous_nl[qp].col(d) += dphi_qp(d) * _dof_values_previous_nl[i];
-    }
-  }
-  // No AD support for array variable yet.
-}
-
 template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::computeMonomialValues()
@@ -1269,14 +848,6 @@ MooseVariableDataFV<OutputType>::computeMonomialValues()
   }
 }
 
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::computeMonomialValues()
-{
-  // Fixeme: will think of optimization later
-  computeValues();
-}
-
 template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::computeAD(const unsigned int num_dofs, const unsigned int nqp)
@@ -1418,13 +989,6 @@ void
 MooseVariableDataFV<OutputType>::setDofValue(const OutputData & value, unsigned int index)
 {
   _dof_values[index] = value;
-  _has_dof_values = true;
-  for (unsigned int qp = 0; qp < _u.size(); qp++)
-  {
-    _u[qp] = (*_phi)[0][qp] * _dof_values[0];
-    for (unsigned int i = 1; i < _dof_values.size(); i++)
-      _u[qp] += (*_phi)[i][qp] * _dof_values[i];
-  }
 }
 
 template <typename OutputType>
@@ -1435,13 +999,6 @@ MooseVariableDataFV<OutputType>::setDofValues(const DenseVector<OutputData> & va
     _dof_values[i] = values(i);
 
   _has_dof_values = true;
-
-  for (unsigned int qp = 0; qp < _u.size(); qp++)
-  {
-    _u[qp] = (*_phi)[0][qp] * _dof_values[0];
-    for (unsigned int i = 1; i < _dof_values.size(); i++)
-      _u[qp] += (*_phi)[i][qp] * _dof_values[i];
-  }
 }
 
 template <typename OutputType>
@@ -1695,45 +1252,6 @@ MooseVariableDataFV<OutputType>::dofValuesDuDotDotDu() const
 
 template <typename OutputType>
 void
-MooseVariableDataFV<OutputType>::computeIncrementAtQps(const NumericVector<Number> & increment_vec)
-{
-  unsigned int nqp = _qrule->n_points();
-
-  _increment.resize(nqp);
-  // Compute the increment at each quadrature point
-  unsigned int num_dofs = _dof_indices.size();
-  for (unsigned int qp = 0; qp < nqp; qp++)
-  {
-    _increment[qp] = 0;
-    for (unsigned int i = 0; i < num_dofs; i++)
-      _increment[qp] += (*_phi)[i][qp] * increment_vec(_dof_indices[i]);
-  }
-}
-
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::computeIncrementAtQps(
-    const NumericVector<Number> & increment_vec)
-{
-  unsigned int nqp = _qrule->n_points();
-
-  _increment.resize(nqp);
-  // Compute the increment at each quadrature point
-  unsigned int num_dofs = _dof_indices.size();
-  for (unsigned int qp = 0; qp < nqp; qp++)
-  {
-    unsigned int n = 0;
-    for (unsigned int j = 0; j < _count; j++)
-      for (unsigned int i = 0; i < num_dofs; i++)
-      {
-        _increment[qp](j) += (*_phi)[i][qp] * increment_vec(_dof_indices[i] + n);
-        n += num_dofs;
-      }
-  }
-}
-
-template <typename OutputType>
-void
 MooseVariableDataFV<OutputType>::fetchDoFValues()
 {
   bool is_transient = _subproblem.isTransient();
@@ -1818,99 +1336,6 @@ MooseVariableDataFV<OutputType>::fetchDoFValues()
           {
             Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
             _matrix_tags_dof_u[tag][i] = mat(_dof_indices[i], _dof_indices[i]);
-          }
-        }
-    }
-  }
-
-  if (_need_du_dot_du || _need_dof_du_dot_du)
-  {
-    _dof_du_dot_du.resize(n);
-    for (decltype(n) i = 0; i < n; ++i)
-      _dof_du_dot_du[i] = _sys.duDotDu();
-  }
-  if (_need_du_dotdot_du || _need_dof_du_dotdot_du)
-  {
-    _dof_du_dotdot_du.resize(n);
-    for (decltype(n) i = 0; i < n; ++i)
-      _dof_du_dotdot_du[i] = _sys.duDotDotDu();
-  }
-}
-
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::fetchDoFValues()
-{
-  bool is_transient = _subproblem.isTransient();
-
-  auto n = _dof_indices.size();
-  libmesh_assert(n);
-
-  /*
-   * A note here: we might use Eigen::map to remove fetching data, a future work
-   * we can consider.
-   */
-
-  getArrayDoFValues(*_sys.currentSolution(), n, _dof_values);
-
-  if (is_transient)
-  {
-    if (_need_u_old || _need_grad_old || _need_second_old || _need_curl_old || _need_dof_values_old)
-      getArrayDoFValues(_sys.solutionOld(), n, _dof_values_old);
-    if (_need_u_older || _need_grad_older || _need_second_older || _need_dof_values_older)
-      getArrayDoFValues(_sys.solutionOlder(), n, _dof_values_older);
-    if (_need_u_dot || _need_grad_dot || _need_dof_values_dot)
-    {
-      libmesh_assert(_sys.solutionUDot());
-      getArrayDoFValues(*_sys.solutionUDot(), n, _dof_values_dot);
-    }
-    if (_need_u_dotdot || _need_grad_dotdot || _need_dof_values_dotdot)
-    {
-      libmesh_assert(_sys.solutionUDotDot());
-      getArrayDoFValues(*_sys.solutionUDot(), n, _dof_values_dotdot);
-    }
-    if (_need_u_dot_old || _need_dof_values_dot_old)
-    {
-      libmesh_assert(_sys.solutionUDotOld());
-      getArrayDoFValues(*_sys.solutionUDotOld(), n, _dof_values_dot_old);
-    }
-    if (_need_u_dotdot_old || _need_dof_values_dotdot_old)
-    {
-      libmesh_assert(_sys.solutionUDotDotOld());
-      getArrayDoFValues(*_sys.solutionUDotDotOld(), n, _dof_values_dotdot_old);
-    }
-  }
-
-  if (_need_u_previous_nl || _need_grad_previous_nl || _need_second_previous_nl ||
-      _need_dof_values_previous_nl)
-    getArrayDoFValues(*_sys.solutionPreviousNewton(), n, _dof_values_previous_nl);
-
-  if (_sys.subproblem().safeAccessTaggedVectors())
-  {
-    auto & active_coupleable_vector_tags =
-        _sys.subproblem().getActiveFEVariableCoupleableVectorTags(_tid);
-    for (auto tag : active_coupleable_vector_tags)
-      if (_need_vector_tag_u[tag] || _need_vector_tag_dof_u[tag])
-        if (_sys.hasVector(tag) && _sys.getVector(tag).closed())
-          getArrayDoFValues(_sys.getVector(tag), n, _vector_tags_dof_u[tag]);
-  }
-
-  if (_sys.subproblem().safeAccessTaggedMatrices())
-  {
-    auto & active_coupleable_matrix_tags =
-        _sys.subproblem().getActiveFEVariableCoupleableMatrixTags(_tid);
-    for (auto tag : active_coupleable_matrix_tags)
-    {
-      _matrix_tags_dof_u[tag].resize(n);
-      if (_need_matrix_tag_dof_u[tag] || _need_matrix_tag_u[tag])
-        if (_sys.hasMatrix(tag) && _sys.matrixTagActive(tag) && _sys.getMatrix(tag).closed())
-        {
-          auto & mat = _sys.getMatrix(tag);
-          for (unsigned i = 0; i < n; i++)
-          {
-            Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
-            for (unsigned j = 0; j < _count; j++)
-              _matrix_tags_dof_u[tag][i](j) = mat(_dof_indices[i] + j, _dof_indices[i] + j);
           }
         }
     }

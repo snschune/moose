@@ -27,23 +27,23 @@ template <typename OutputType>
 class MooseVariableDataFV
 {
 public:
-  using OutputGradient = MooseVariableData::OutputGradient;
-  using OutputSecond = MooseVariableData::OutputSecond;
-  using OutputDivergence = MooseVariableData::OutputDivergence;
+  using OutputGradient = typename MooseVariableData<OutputType>::OutputGradient;
+  using OutputSecond = typename MooseVariableData<OutputType>::OutputSecond;
+  using OutputDivergence = typename MooseVariableData<OutputType>::OutputDivergence;
 
-  using FieldVariableValue = MooseVariableData::FieldVariableValue;
-  using FieldVariableGradient = MooseVariableData::FieldVariableGradient;
-  using FieldVariableSecond = MooseVariableData::FieldVariableSecond;
-  using FieldVariableCurl = MooseVariableData::FieldVariableCurl;
-  using FieldVariableDivergence = MooseVariableData::FieldVariableDivergence;
+  using FieldVariableValue = typename MooseVariableData<OutputType>::FieldVariableValue;
+  using FieldVariableGradient = typename MooseVariableData<OutputType>::FieldVariableGradient;
+  using FieldVariableSecond = typename MooseVariableData<OutputType>::FieldVariableSecond;
+  using FieldVariableCurl = typename MooseVariableData<OutputType>::FieldVariableCurl;
+  using FieldVariableDivergence = typename MooseVariableData<OutputType>::FieldVariableDivergence;
 
-  using OutputShape = MooseVariableData::OutputShape;
-  using OutputShapeGradient = MooseVariableData::OutputShapeGradient;
-  using OutputShapeSecond = MooseVariableData::OutputShapeSecond;
-  using OutputShapeDivergence = MooseVariableData::OutputShapeDivergence;
+  using OutputShape = typename MooseVariableData<OutputType>::OutputShape;
+  using OutputShapeGradient = typename MooseVariableData<OutputType>::OutputShapeGradient;
+  using OutputShapeSecond = typename MooseVariableData<OutputType>::OutputShapeSecond;
+  using OutputShapeDivergence = typename MooseVariableData<OutputType>::OutputShapeDivergence;
 
-  using OutputData = MooseVariableData::OutputData;
-  using DoFValue = MooseVariableData::DoFValue;
+  using OutputData = typename MooseVariableData<OutputType>::OutputData;
+  using DoFValue = typename MooseVariableData<OutputType>::DoFValue;
 
   MooseVariableDataFV(const MooseVariableFE<OutputType> & var,
                       const SystemBase & sys,
@@ -155,8 +155,6 @@ public:
   const typename VariableSecondType<OutputType, compute_stage>::type & adSecondSln() const
   {
     _need_ad = _need_ad_second_u = true;
-    secondPhi();
-    secondPhiFace();
     return _ad_second_u;
   }
 
@@ -194,6 +192,8 @@ public:
 
   void setDofValue(const OutputData & value, unsigned int index);
 
+  template <typename OutputType>
+  OutputData
   getElementalValue(const Elem * elem, Moose::SolutionState state, unsigned int idx = 0) const;
 
   ///////////////////////////// dof indices ///////////////////////////////////////////////
@@ -291,9 +291,6 @@ private:
   void fetchDoFValues();
   void fetchADDoFValues();
   void zeroSizeDofValues();
-  inline void getArrayDoFValues(const NumericVector<Number> & sol,
-                                unsigned int n,
-                                MooseArray<RealEigenVector> & dof_values) const;
 
   /// A const reference to the owning MooseVariableFE object
   const MooseVariableFE<OutputType> & _var;
@@ -549,36 +546,3 @@ template <>
 template <>
 const MooseArray<Real> & MooseVariableDataFV<RealVectorValue>::adDofValues<RESIDUAL>() const;
 
-////////////////////// Definitions of fully specialized templates (must be inlined) //////////
-
-template <>
-template <>
-inline const typename VariableTestGradientType<Real, RESIDUAL>::type &
-MooseVariableDataFV<Real>::adGradPhi<RESIDUAL>() const
-{
-  return *_grad_phi;
-}
-
-template <>
-template <>
-inline const typename VariableTestGradientType<RealVectorValue, RESIDUAL>::type &
-MooseVariableDataFV<RealVectorValue>::adGradPhi<RESIDUAL>() const
-{
-  return *_grad_phi;
-}
-
-template <>
-template <>
-inline const typename VariableTestGradientType<Real, RESIDUAL>::type &
-MooseVariableDataFV<Real>::adGradPhiFace<RESIDUAL>() const
-{
-  return *_grad_phi_face;
-}
-
-template <>
-template <>
-inline const typename VariableTestGradientType<RealVectorValue, RESIDUAL>::type &
-MooseVariableDataFV<RealVectorValue>::adGradPhiFace<RESIDUAL>() const
-{
-  return *_grad_phi_face;
-}
