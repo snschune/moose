@@ -17,6 +17,8 @@ template <typename>
 class NumericVector;
 }
 
+class FaceInfo;
+
 class MooseVariableFVBase;
 template <>
 InputParameters validParams<MooseVariableFVBase>();
@@ -64,7 +66,7 @@ public:
   virtual void computeElemValues() = 0;
   /// Compute values at face quadrature points for the element+neighbor (both
   /// sides of the face).
-  virtual void computeElemValuesFace() = 0;
+  virtual void computeFaceValues(const FaceInfo & fi) = 0;
 
   virtual const std::vector<dof_id_type> & dofIndices() const = 0;
   virtual const std::vector<dof_id_type> & dofIndicesNeighbor() const = 0;

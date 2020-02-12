@@ -13,6 +13,7 @@
 #include "MooseMesh.h"
 #include "MooseTypes.h"
 #include "MooseException.h"
+#include "FVKernel.h"
 #include "libmesh/libmesh_exceptions.h"
 #include "libmesh/elem.h"
 
@@ -41,7 +42,7 @@ template <typename RangeType>
 class ComputeFVFaceResidualsThread
 {
 public:
-  ComputeFVFaceResidualsThread(MooseMesh & mesh);
+  ComputeFVFaceResidualsThread(FEProblemBase & fe_problem);
 
   ComputeFVFaceResidualsThread(ComputeFVFaceResidualsThread & x, Threads::split split);
 
@@ -98,6 +99,7 @@ public:
   virtual void caughtMooseException(MooseException &){};
 
 protected:
+  FEProblemBase & _fe_problem;
   MooseMesh & _mesh;
   THREAD_ID _tid;
 
@@ -115,15 +117,15 @@ protected:
 };
 
 template <typename RangeType>
-ComputeFVFaceResidualsThread<RangeType>::ComputeFVFaceResidualsThread(MooseMesh & mesh)
-  : _mesh(mesh)
+ComputeFVFaceResidualsThread<RangeType>::ComputeFVFaceResidualsThread(FEProblemBase & fe_problem)
+  : _fe_problem(fe_problem), _mesh(fe_problem.mesh())
 {
 }
 
 template <typename RangeType>
 ComputeFVFaceResidualsThread<RangeType>::ComputeFVFaceResidualsThread(
     ComputeFVFaceResidualsThread & x, Threads::split /*split*/)
-  : _mesh(x._mesh)
+  : _fe_problem(x._fe_problem), _mesh(x._mesh)
 {
 }
 
@@ -160,7 +162,7 @@ ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, boo
         unsigned int side = faceinfo->leftSide();
 
         _old_subdomain = _subdomain;
-        _subdomain = elem->subdomain_id();
+        _subdomain = elem.subdomain_id();
         if (_subdomain != _old_subdomain)
           subdomainChanged();
 
@@ -203,22 +205,16 @@ template <typename RangeType>
 void
 ComputeFVFaceResidualsThread<RangeType>::onFace(const FaceInfo & fi)
 {
-  std::vector<FVKernel *> kernels;
+  std::vector<FVFluxKernel *> kernels;
   _fe_problem.theWarehouse()
       .query()
-      .condition<AttribSystem>("FVFluxKernels")
-      .condition<AttribSubdomains>(_subdomain)
+      .template condition<AttribSystem>("FVFluxKernels")
+      .template condition<AttribSubdomains>(_subdomain)
       .queryInto(kernels);
   if (kernels.size() == 0)
     return;
 
-  // TODO: we should do reconstruction on-demand inside the FV
-  // variable class and return reconstructed values for face reinits and
-  // regular values for volume reinits.
-
-  // This needs to skip all the regular FE and fancy quadrature (re)init stuff
-  // and just update assembly and dof indices sorts of things as necessary.
-  _fe_problem.reinitFVFace(fi);
+  _fe_problem.reinitFVFace(fi, _tid);
 
   // Set up Sentinels so that, even if one of the reinitMaterialsXXX() calls throws, we
   // still remember to swap back during stack unwinding.

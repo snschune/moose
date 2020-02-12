@@ -75,7 +75,7 @@ public:
   void clearDofIndices() override;
 
   void prepare() override;
-  void prepareFace() override;
+  void prepareFace(const FaceInfo & fi) override;
 
   virtual void prepareIC() override;
 
@@ -170,7 +170,7 @@ public:
 
   /// Actually compute variable values from the solution vectors
   virtual void computeElemValues() override;
-  virtual void computeElemValuesFace() override;
+  virtual void computeFaceValues(const FaceInfo & fi) override;
 
   /**
    * Set local DOF values and evaluate the values on quadrature points

@@ -12,6 +12,7 @@
 #include "Factory.h"
 #include "SubProblem.h"
 #include "MooseVariableFE.h"
+#include "MooseVariableFV.h"
 #include "MooseVariableScalar.h"
 #include "MooseVariableConstMonomial.h"
 #include "Conversion.h"
@@ -314,6 +315,19 @@ SystemBase::prepareLowerD(THREAD_ID tid)
   const std::vector<MooseVariableFEBase *> & vars = _vars[tid].fieldVariables();
   for (const auto & var : vars)
     var->prepareLowerD();
+}
+
+SystemBase::reinitFVFace(const FaceInfo & fi, THREAD_ID tid)
+{
+  // TODO: need to make a hasActiveMooseVariablesFV and getActiveMooseVariablesFV
+  if (_subproblem.hasActiveMooseVariablesFV(tid))
+  {
+    const std::set<MooseVariableFVBase *> & active_elemental_moose_variables =
+        _subproblem.getActiveElementalMooseVariables(tid);
+    for (const auto & var : active_elemental_moose_variables)
+      if (&(var->sys()) == this)
+        var->computeFaceValues(fi);
+  }
 }
 
 void

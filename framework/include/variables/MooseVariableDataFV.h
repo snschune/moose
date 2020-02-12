@@ -23,6 +23,8 @@
 #include <functional>
 #include <vector>
 
+class FaceInfo;
+
 template <typename OutputType>
 class MooseVariableDataFV
 {
@@ -49,9 +51,6 @@ public:
                       const SystemBase & sys,
                       THREAD_ID tid,
                       Moose::ElementType element_type,
-                      const QBase * const & qrule_in,
-                      const QBase * const & qrule_face_in,
-                      const Node * const & node,
                       const Elem * const & elem);
 
   /**
@@ -70,7 +69,12 @@ public:
   /**
    * compute the variable values
    */
-  void computeValues();
+  void computeValuesFace(const FaceInfo & fi);
+
+  /**
+   * compute the variable values
+   */
+  void computeValues(bool force = false);
 
   /**
    * compute AD things
@@ -79,17 +83,10 @@ public:
 
   ///////////////////////////// Shape functions /////////////////////////////////////
 
-  bool isNodal() const { return _is_nodal; }
-
   /**
    * The current element
    */
   const Elem * const & currentElem() const { return _elem; }
-
-  /**
-   * The current side
-   */
-  const unsigned int & currentSide() const { return _current_side; }
 
   /**
    * prepare the initial condition
@@ -187,7 +184,6 @@ public:
 
   void setDofValue(const OutputData & value, unsigned int index);
 
-  template <typename OutputType>
   OutputData
   getElementalValue(const Elem * elem, Moose::SolutionState state, unsigned int idx = 0) const;
 
@@ -202,22 +198,6 @@ public:
    * Get the dof indices corresponding to the current element
    */
   void prepare();
-
-  /**
-   * setter of _has_dof_values
-   * @param has_dof_values The boolean value we are setting _has_dof_values to
-   */
-  void hasDofValues(bool has_dof_values) { _has_dof_values = has_dof_values; }
-
-  /**
-   * Prepare dof indices and solution values for elemental auxiliary variables
-   */
-  void prepareAux();
-
-  /**
-   * Prepare dof indices and solution values for elemental auxiliary variables
-   */
-  void reinitAux();
 
   /**
    * Set the current local DOF values to the input vector
@@ -278,6 +258,8 @@ public:
   }
 
 private:
+  void initializeSolnVars();
+
   /**
    * Helper methods for assigning nodal values from their corresponding solution values (dof
    * values as they're referred to here in this class). These methods are only truly meaningful
@@ -286,6 +268,9 @@ private:
   void fetchDoFValues();
   void fetchADDoFValues();
   void zeroSizeDofValues();
+
+  int64_t _last_elem_id;
+  int64_t _last_neighbor_id;
 
   /// A const reference to the owning MooseVariableFE object
   const MooseVariableFE<OutputType> & _var;
@@ -315,12 +300,6 @@ private:
 
   mutable std::vector<bool> _need_vector_tag_dof_u;
   mutable std::vector<bool> _need_matrix_tag_dof_u;
-
-  /// if variable is nodal
-  bool _is_nodal;
-
-  /// The dof index for the current node
-  dof_id_type _nodal_dof_index;
 
   // Dof values of tagged vectors
   std::vector<DoFValue> _vector_tags_dof_u;
@@ -392,9 +371,6 @@ private:
   mutable bool _need_dof_values_dotdot_old;
   mutable bool _need_dof_du_dot_du;
   mutable bool _need_dof_du_dotdot_du;
-
-  bool _has_dof_indices;
-  bool _has_dof_values;
 
   /// local solution values
   DoFValue _dof_values;
@@ -480,9 +456,6 @@ private:
 
   /// Whether this variable is being calculated on a displaced system
   const bool _displaced;
-
-  /// The current element side
-  const unsigned int & _current_side;
 };
 
 /////////////////////// General template definitions //////////////////////////////////////

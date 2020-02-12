@@ -98,6 +98,8 @@
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/string_to_enum.h"
 
+class FaceInfo;
+
 // Anonymous namespace for helper function
 namespace
 {
@@ -1614,6 +1616,18 @@ FEProblemBase::reinitDirac(const Elem * elem, THREAD_ID tid)
   }
 
   return have_points;
+}
+
+void
+FEProblemBase::reinitFVFace(const FaceInfo & fi, THREAD_ID tid)
+{
+  _nl->reinitFVFace(fi, tid);
+  _aux->reinitFVFace(fi, tid);
+
+  // TODO: How to we match up with a corresponding FaceInfo object in the
+  // displaced mesh?
+  // if (_displaced_problem && _reinit_displaced_fv_face)
+  //  _displaced_problem->reinitFVFace(_displaced_mesh->equivalentFace(fi), tid);
 }
 
 void

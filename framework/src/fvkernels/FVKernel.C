@@ -2,6 +2,8 @@
 #include "FVKernel.h"
 #include "Assembly.h"
 
+#include "ComputeFVFaceResidualsThread.h"
+
 FVFluxKernel::FVFluxKernel(const InputParameters & params)
   : MooseObject(params),
     TaggingInterface(this),

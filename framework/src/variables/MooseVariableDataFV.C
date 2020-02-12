@@ -25,12 +25,11 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFE<Outpu
                                                      const SystemBase & sys,
                                                      THREAD_ID tid,
                                                      Moose::ElementType element_type,
-                                                     const QBase * const & qrule_in,
-                                                     const QBase * const & qrule_face_in,
-                                                     const Node * const & node,
                                                      const Elem * const & elem)
 
-  : _var(var),
+  : _last_elem_id(-1),
+    _last_neighbor_id(-1),
+    _var(var),
     _fe_type(_var.feType()),
     _var_num(_var.number()),
     _sys(sys),
@@ -77,26 +76,10 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFE<Outpu
     _need_dof_values_dotdot_old(false),
     _need_dof_du_dot_du(false),
     _need_dof_du_dotdot_du(false),
-    _has_dof_indices(false),
-    _has_dof_values(false),
-    _qrule(qrule_in),
-    _qrule_face(qrule_face_in),
     _time_integrator(nullptr),
-    _node(node),
     _elem(elem),
     _displaced(dynamic_cast<const DisplacedSystem *>(&_sys) ? true : false),
-    _current_side(_assembly.side())
 {
-  // FIXME: continuity of FE type seems equivalent with the definition of nodal variables.
-  //        Continuity does not depend on the FE dimension, so we just pass in a valid dimension.
-  if (_fe_type.family == NEDELEC_ONE || _fe_type.family == LAGRANGE_VEC ||
-      _fe_type.family == MONOMIAL_VEC)
-    _continuity = _assembly.getVectorFE(_fe_type, _sys.mesh().dimension())->get_continuity();
-  else
-    _continuity = _assembly.getFE(_fe_type, _sys.mesh().dimension())->get_continuity();
-
-  _is_nodal = (_continuity == C_ZERO || _continuity == C_ONE);
-
   auto num_vector_tags = _sys.subproblem().numVectorTags();
 
   _vector_tags_dof_u.resize(num_vector_tags);
@@ -361,22 +344,12 @@ MooseVariableDataFV<OutputType>::curlSln(Moose::SolutionState state) const
 
 template <typename OutputType>
 void
-MooseVariableDataFV<OutputType>::computeValues()
+MooseVariableDataFV<OutputType>::initializeSolnVars()
 {
-  unsigned int num_dofs = _dof_indices.size();
-
-  if (num_dofs > 0)
-    fetchDoFValues();
-
-  bool is_transient = _subproblem.isTransient();
   unsigned int nqp = 1;
-  auto && active_coupleable_vector_tags =
-      _sys.subproblem().getActiveFEVariableCoupleableVectorTags(_tid);
-  auto && active_coupleable_matrix_tags =
-      _sys.subproblem().getActiveFEVariableCoupleableMatrixTags(_tid);
 
   _u.resize(nqp);
-  _u[0] = _dof_values[0];
+  _u[0] = 0;
   _grad_u.resize(nqp);
   _grad_u[0] = 0;
 
@@ -516,11 +489,75 @@ MooseVariableDataFV<OutputType>::computeValues()
       _second_u_older[0] = 0;
     }
   }
+}
+
+template <typename OutputType>
+void
+MooseVariableDataFV<OutputType>::computeValuesFace(const FaceInfo & fi)
+{
+  if (_last_elem_id == fi.left()->id() && _last_neighbor_id == fi.right()->id())
+    return;
+
+  _dof_map.dof_indices(_elem, _dof_indices, _var_num);
+  _last_elem_id = fi.left()->id();
+  _last_neighbor_id = fi.right()->id();
+
+  // TODO: compute reconstructed values somehow.  For now, just do the trivial
+  // reconstruction where we take the const cell value from the centroid and
+  // use that value on the face.  How will users affect the reconstruction
+  // method used here?  After reconstruction, we should cache the compute
+  // soln/gradients per element so we don't have to recompute them again for
+  // other faces that share an element with this face.
+  computeValues(true);
+
+  // TODO: this code should go away once we have a real reconstruction
+  // routine. - or maybe this becomes a separate _grad_u_interface that is
+  // only used for diffusion terms that need an interface gradient.  Also -
+  // this will need cross-diffusion corrections for non-orthogonal meshes
+  // eventually.
+  std::vector<dof_id_type> indices(1);
+  DoFValue values;
+  values.resize(1);
+  auto & soln = *_sys.currentSolution();
+  Real uleft = soln(fi.leftDofIndex());
+  Real uright = soln(fi.rightDofIndex());
+  _grad_u[0] = (uright - uleft) / ((fi->rightCentroid() - fi->leftCentroid()).l2norm())
+
+  // TODO: figure out how to store old/older values of reconstructed
+  // solutions/gradient states without having to re-reconstruct them from
+  // older dof/soln values.
+}
+
+template <typename OutputType>
+void
+MooseVariableDataFV<OutputType>::computeValues(bool force)
+{
+  if (!force && (_last_elem_id == _elem->id()))
+    return;
+
+  _dof_map.dof_indices(_elem, _dof_indices, _var_num);
+  _last_elem_id = _elem->id();
+
+  unsigned int num_dofs = _dof_indices.size();
+
+  if (num_dofs > 0)
+    fetchDoFValues();
+
+  bool is_transient = _subproblem.isTransient();
+  unsigned int nqp = 1;
+  auto && active_coupleable_vector_tags =
+      _sys.subproblem().getActiveFEVariableCoupleableVectorTags(_tid);
+  auto && active_coupleable_matrix_tags =
+      _sys.subproblem().getActiveFEVariableCoupleableMatrixTags(_tid);
+
+  initializeSolnVars();
+
+  _u[0] = _dof_values[0];
+  _grad_u[0] = 0;
 
   bool second_required =
       _need_second || _need_second_old || _need_second_older || _need_second_previous_nl;
   bool curl_required = _need_curl || _need_curl_old;
-
 
   if (is_transient)
   {
@@ -745,8 +782,6 @@ MooseVariableDataFV<OutputType>::setDofValues(const DenseVector<OutputData> & va
 {
   for (unsigned int i = 0; i < values.size(); i++)
     _dof_values[i] = values(i);
-
-  _has_dof_values = true;
 }
 
 template <typename OutputType>
@@ -822,23 +857,19 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::insert(NumericVector<Number> & residual)
 {
-  if (_has_dof_values)
-    residual.insert(&_dof_values[0], _dof_indices);
+  residual.insert(&_dof_values[0], _dof_indices);
 }
 
 template <>
 void
 MooseVariableDataFV<RealEigenVector>::insert(NumericVector<Number> & residual)
 {
-  if (_has_dof_values)
+  unsigned int n = 0;
+  for (unsigned int j = 0; j < _count; ++j)
   {
-    unsigned int n = 0;
-    for (unsigned int j = 0; j < _count; ++j)
-    {
-      for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-        residual.set(_dof_indices[i] + n, _dof_values[i](j));
-      n += _dof_indices.size();
-    }
+    for (unsigned int i = 0; i < _dof_indices.size(); ++i)
+      residual.set(_dof_indices[i] + n, _dof_values[i](j));
+    n += _dof_indices.size();
   }
 }
 
@@ -846,23 +877,19 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::add(NumericVector<Number> & residual)
 {
-  if (_has_dof_values)
-    residual.add_vector(&_dof_values[0], _dof_indices);
+  residual.add_vector(&_dof_values[0], _dof_indices);
 }
 
 template <>
 void
 MooseVariableDataFV<RealEigenVector>::add(NumericVector<Number> & residual)
 {
-  if (_has_dof_values)
+  unsigned int n = 0;
+  for (unsigned int j = 0; j < _count; ++j)
   {
-    unsigned int n = 0;
-    for (unsigned int j = 0; j < _count; ++j)
-    {
-      for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-        residual.add(_dof_indices[i] + n, _dof_values[i](j));
-      n += _dof_indices.size();
-    }
+    for (unsigned int i = 0; i < _dof_indices.size(); ++i)
+      residual.add(_dof_indices[i] + n, _dof_values[i](j));
+    n += _dof_indices.size();
   }
 }
 
@@ -872,20 +899,6 @@ MooseVariableDataFV<OutputType>::addSolution(NumericVector<Number> & sol,
                                              const DenseVector<Number> & v) const
 {
   sol.add_vector(v, _dof_indices);
-}
-
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::addSolution(NumericVector<Number> & sol,
-                                                  const DenseVector<Number> & v) const
-{
-  unsigned int p = 0;
-  for (unsigned int j = 0; j < _count; ++j)
-  {
-    unsigned int inc = (isNodal() ? j : j * _dof_indices.size());
-    for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-      sol.add(_dof_indices[i] + inc, v(p++));
-  }
 }
 
 template <typename OutputType>
@@ -1181,53 +1194,15 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::prepare()
 {
+  _last_elem_id = _dof_map.dof_indices(_elem, _dof_indices, _var_num);
+}
+
+template <typename OutputType>
+void
+MooseVariableDataFV<OutputType>::prepareFace(const FaceInto & fi)
+{
+  if (_last_elem_id
   _dof_map.dof_indices(_elem, _dof_indices, _var_num);
-  _has_dof_values = false;
-
-  // FIXME: remove this when the Richard's module is migrated to use the new NodalCoupleable
-  // interface.
-  if (_dof_indices.size() > 0)
-    _has_dof_indices = true;
-  else
-    _has_dof_indices = false;
-}
-
-template <typename OutputType>
-void
-MooseVariableDataFV<OutputType>::prepareAux()
-{
-  _has_dof_values = false;
-}
-
-template <typename OutputType>
-void
-MooseVariableDataFV<OutputType>::reinitAux()
-{
-  /* FIXME: this method is only for elemental auxiliary variables, so
-   * we may want to rename it */
-  if (_elem)
-  {
-    _dof_map.dof_indices(_elem, _dof_indices, _var_num);
-    if (_elem->n_dofs(_sys.number(), _var_num) > 0)
-    {
-      // FIXME: check if the following is equivalent with '_nodal_dof_index = _dof_indices[0];'?
-      _nodal_dof_index = _elem->dof_number(_sys.number(), _var_num, 0);
-
-      fetchDoFValues();
-
-      for (auto & dof_u : _vector_tags_dof_u)
-        dof_u.resize(_dof_indices.size());
-
-      for (auto & dof_u : _matrix_tags_dof_u)
-        dof_u.resize(_dof_indices.size());
-
-      _has_dof_indices = true;
-    }
-    else
-      _has_dof_indices = false;
-  }
-  else
-    _has_dof_indices = false;
 }
 
 template <>

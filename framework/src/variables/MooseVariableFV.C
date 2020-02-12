@@ -23,18 +23,12 @@ MooseVariableFV<OutputType>::MooseVariableFV(const InputParameters & parameters)
                                                                      _sys,
                                                                      _tid,
                                                                      Moose::ElementType::Element,
-                                                                     _assembly.qRule(),
-                                                                     _assembly.qRuleFace(),
-                                                                     _assembly.node(),
                                                                      _assembly.elem());
   _neighbor_data =
       libmesh_make_unique<MooseVariableData<OutputType>>(*this,
                                                          _sys,
                                                          _tid,
                                                          Moose::ElementType::Neighbor,
-                                                         _assembly.qRuleNeighbor(), // Place holder
-                                                         _assembly.qRuleNeighbor(),
-                                                         _assembly.nodeNeighbor(),
                                                          _assembly.neighbor());
 }
 
@@ -81,10 +75,10 @@ MooseVariableFV<OutputType>::prepare()
 }
 template <typename OutputType>
 void
-MooseVariableFV<OutputType>::prepareFace()
+MooseVariableFV<OutputType>::prepareFace(const FaceInfo & fi)
 {
-  _element_data->prepare();
-  _neighbor_data->prepare();
+  _element_data->prepareFace(fi);
+  _neighbor_data->prepareFace(fi);
 }
 
 template <typename OutputType>
@@ -301,26 +295,11 @@ MooseVariableFV<OutputType>::computeElemValues()
 
 template <typename OutputType>
 void
-MooseVariableFV<OutputType>::computeElemValuesFace()
+MooseVariableFV<OutputType>::computeFaceValues(const FaceInfo & fi)
 {
   _element_data->setGeometry(Moose::Face);
-  _element_data->computeValues();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::computeNeighborValuesFace()
-{
-  _neighbor_data->setGeometry(Moose::Face);
-  _neighbor_data->computeValues();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::computeNeighborValues()
-{
-  _neighbor_data->setGeometry(Moose::Volume);
-  _neighbor_data->computeValues();
+  _element_data->computeValuesFace(fi);
+  _neighbor_data->computeValuesFace(fi);
 }
 
 template <typename OutputType>

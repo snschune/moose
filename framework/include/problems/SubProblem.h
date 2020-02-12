@@ -345,6 +345,7 @@ public:
   virtual void setNeighborSubdomainID(const Elem * elem, unsigned int side, THREAD_ID tid) = 0;
   virtual void prepareAssembly(THREAD_ID tid) = 0;
 
+  void reinitFVFace(const FaceInfo & fi, THREAD_ID tid) = 0;
   virtual void reinitElem(const Elem * elem, THREAD_ID tid) = 0;
   virtual void reinitElemPhys(const Elem * elem,
                               const std::vector<Point> & phys_points_in_elem,
