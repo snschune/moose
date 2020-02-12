@@ -25,7 +25,6 @@ TestFaceInfo::validParams()
 
 TestFaceInfo::TestFaceInfo(const InputParameters & parameters)
   : GeneralVectorPostprocessor(parameters),
-    _face_info(_fe_problem.mesh().faceInfo()),
     _face_id(declareVector("id")),
     _face_area(declareVector("area")),
     _left_element_id(declareVector("left_elem")),
@@ -50,43 +49,45 @@ TestFaceInfo::TestFaceInfo(const InputParameters & parameters)
 void
 TestFaceInfo::execute()
 {
-  for (unsigned int j = 0; j < _face_info.nFaces(); ++j)
+  unsigned int j = 0;
+  for (auto & p : _fe_problem.mesh().faceInfo())
   {
     _face_id.push_back(j);
-    _face_area.push_back(_face_info.area(j));
-    _left_element_id.push_back(_face_info.leftElem(j)->id());
-    _right_element_id.push_back(_face_info.rightElem(j)->id());
-    _left_element_side.push_back(_face_info.leftSideID(j));
-    _right_element_side.push_back(_face_info.rightSideID(j));
+    _face_area.push_back(p.area());
+    _left_element_id.push_back(p.leftElem()->id());
+    _right_element_id.push_back(p.rightElem()->id());
+    _left_element_side.push_back(p.leftSideID());
+    _right_element_side.push_back(p.rightSideID());
 
-    Point normal = _face_info.normal(j);
+    Point normal = p.normal();
     _nx.push_back(normal(0));
     _ny.push_back(normal(1));
     _nz.push_back(normal(2));
-    Point fc = _face_info.faceCentroid(j);
+    Point fc = p.faceCentroid();
     _face_cx.push_back(fc(0));
     _face_cy.push_back(fc(1));
     _face_cz.push_back(fc(2));
-    Point lc = _face_info.leftCentroid(j);
+    Point lc = p.leftCentroid();
     _left_cx.push_back(lc(0));
     _left_cy.push_back(lc(1));
     _left_cz.push_back(lc(2));
-    Point rc = _face_info.rightCentroid(j);
+    Point rc = p.rightCentroid();
     _right_cx.push_back(rc(0));
     _right_cy.push_back(rc(1));
     _right_cz.push_back(rc(2));
 
-    if (_face_info.leftElem(j) != _face_info.elements(j).first)
+    if (p.leftElem() != p.elements().first)
       mooseError("Mismatch of elements and leftElem functions");
-    if (_face_info.rightElem(j) != _face_info.elements(j).second)
+    if (p.rightElem() != p.elements().second)
       mooseError("Mismatch of elements and leftElem functions");
-    if (_face_info.leftSideID(j) != _face_info.sideIDs(j).first)
+    if (p.leftSideID() != p.sideIDs().first)
       mooseError("Mismatch of sideIDs and leftSideID functions");
-    if (_face_info.rightSideID(j) != _face_info.sideIDs(j).second)
+    if (p.rightSideID() != p.sideIDs().second)
       mooseError("Mismatch of sideIDs and rightSideID functions");
-    if (_face_info.centroids(j).first != lc)
+    if (p.centroids().first != lc)
       mooseError("Mismatch of centroids and leftCentroid functions");
-    if (_face_info.centroids(j).second != rc)
+    if (p.centroids().second != rc)
       mooseError("Mismatch of centroids and rightCentroid functions");
+    ++j;
   }
 }

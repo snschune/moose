@@ -29,7 +29,6 @@ public:
   virtual void execute() override;
 
 protected:
-  const MooseMesh::FaceInfo & _face_info;
   VectorPostprocessorValue & _face_id;
   VectorPostprocessorValue & _face_area;
   VectorPostprocessorValue & _left_element_id;
