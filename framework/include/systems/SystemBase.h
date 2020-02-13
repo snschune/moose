@@ -575,6 +575,8 @@ public:
    */
   virtual void prepareLowerD(THREAD_ID tid);
 
+  virtual void reinitFVFace(const FaceInfo & fi, THREAD_ID tid);
+
   /**
    * Reinit an element assembly info
    * @param elem Which element we are reinitializing for

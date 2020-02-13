@@ -253,10 +253,22 @@ SubProblem::getActiveElementalMooseVariables(THREAD_ID tid) const
   return _active_elemental_moose_variables[tid];
 }
 
+const std::set<MooseVariableFVBase *> &
+SubProblem::getActiveMooseVariablesFV(THREAD_ID tid) const
+{
+  mooseError("TODO: implement this");
+}
+
 bool
 SubProblem::hasActiveElementalMooseVariables(THREAD_ID tid) const
 {
   return _has_active_elemental_moose_variables[tid];
+}
+
+bool
+SubProblem::hasActiveMooseVariablesFV(THREAD_ID tid) const
+{
+  mooseError("TODO: implement this");
 }
 
 void

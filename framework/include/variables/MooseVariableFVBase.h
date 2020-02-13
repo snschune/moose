@@ -37,7 +37,7 @@ public:
   virtual void prepare() = 0;
 
   /// Prepare the element+neighbor element degrees of freedom for the given face
-  virtual void prepareFace() = 0;
+  virtual void prepareFace(const FaceInfo & fi) = 0;
 
   /// Prepare the initial condition
   virtual void prepareIC() = 0;
@@ -68,7 +68,6 @@ public:
   /// sides of the face).
   virtual void computeFaceValues(const FaceInfo & fi) = 0;
 
-  virtual const std::vector<dof_id_type> & dofIndices() const = 0;
   virtual const std::vector<dof_id_type> & dofIndicesNeighbor() const = 0;
 
   virtual void insert(NumericVector<Number> & residual) = 0;

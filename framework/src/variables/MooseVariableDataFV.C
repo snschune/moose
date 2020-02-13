@@ -14,6 +14,7 @@
 #include "TimeIntegrator.h"
 #include "MooseVariableFE.h"
 #include "MooseTypes.h"
+#include "ComputeFVFaceResidualsThread.h" // TODO: change this once FaceInfo is placed in its own file
 
 #include "libmesh/quadrature.h"
 #include "libmesh/fe_base.h"
@@ -366,7 +367,7 @@ MooseVariableDataFV<OutputType>::initializeSolnVars()
     if (_need_matrix_tag_u[tag])
     {
       _matrix_tag_u[tag].resize(nqp);
-      _matrix_tag_u[tag][0] = 0
+      _matrix_tag_u[tag][0] = 0;
     }
 
   if (_need_second)
@@ -399,7 +400,7 @@ MooseVariableDataFV<OutputType>::initializeSolnVars()
     _second_u_previous_nl[0] = 0;
   }
 
-  if (is_transient)
+  if (_subproblem.isTransient())
   {
     if (_need_u_dot)
     {
@@ -497,12 +498,12 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::computeValuesFace(const FaceInfo & fi)
 {
-  if (_last_elem_id == fi.left()->id() && _last_neighbor_id == fi.right()->id())
+  if (_last_elem_id == fi.leftElem()->id() && _last_neighbor_id == fi.rightElem()->id())
     return;
 
   _dof_map.dof_indices(_elem, _dof_indices, _var_num);
-  _last_elem_id = fi.left()->id();
-  _last_neighbor_id = fi.right()->id();
+  _last_elem_id = fi.leftElem()->id();
+  _last_neighbor_id = fi.rightElem()->id();
 
   // TODO: compute reconstructed values somehow.  For now, just do the trivial
   // reconstruction where we take the const cell value from the centroid and
@@ -523,7 +524,7 @@ MooseVariableDataFV<OutputType>::computeValuesFace(const FaceInfo & fi)
   auto & soln = *_sys.currentSolution();
   Real uleft = soln(fi.leftDofIndex());
   Real uright = soln(fi.rightDofIndex());
-  _grad_u[0] = (uright - uleft) / ((fi->rightCentroid() - fi->leftCentroid()).l2norm())
+  _grad_u[0] = (uright - uleft) / ((fi.rightCentroid() - fi.leftCentroid()).norm());
 
   // TODO: figure out how to store old/older values of reconstructed
   // solutions/gradient states without having to re-reconstruct them from
@@ -735,26 +736,26 @@ MooseVariableDataFV<OutputType>::computeAD(const unsigned int num_dofs, const un
     for (unsigned int qp = 0; qp < nqp; qp++)
     {
       if (_need_ad_u)
-        _ad_u[qp] += _ad_dof_values[i] * (*_current_phi)[i][qp];
+        _ad_u[qp] += _ad_dof_values[i];
 
       if (_need_ad_grad_u)
       {
         // The latter check here is for handling the fact that we have not yet implemented
         // calculation of ad_grad_phi for neighbor and neighbor-face, so if we are in that situation
         // we need to default to using the non-ad grad_phi
-        if (_displaced && _current_ad_grad_phi)
-          _ad_grad_u[qp] += _ad_dof_values[i] * (*_current_ad_grad_phi)[i][qp];
+        if (_displaced)
+          _ad_grad_u[qp] += _ad_dof_values[i];
         else
-          _ad_grad_u[qp] += _ad_dof_values[i] * (*_current_grad_phi)[i][qp];
+          _ad_grad_u[qp] += _ad_dof_values[i];
       }
 
       if (_need_ad_second_u)
         // Note that this will not carry any derivatives with respect to displacements because those
         // calculations have not yet been implemented in Assembly
-        _ad_second_u[qp] += _ad_dof_values[i] * (*_current_second_phi)[i][qp];
+        _ad_second_u[qp] += _ad_dof_values[i];
 
       if (_need_ad_u_dot && _time_integrator)
-        _ad_u_dot[qp] += (*_current_phi)[i][qp] * _ad_dofs_dot[i];
+        _ad_u_dot[qp] += _ad_dofs_dot[i];
     }
   }
 
@@ -1164,47 +1165,13 @@ MooseVariableDataFV<OutputType>::zeroSizeDofValues()
 
 template <typename OutputType>
 void
-MooseVariableDataFV<OutputType>::getArrayDoFValues(const NumericVector<Number> & sol,
-                                                   unsigned int n,
-                                                   MooseArray<RealEigenVector> & dof_values) const
-{
-  dof_values.resize(n);
-  for (unsigned int i = 0; i < n; ++i)
-  {
-    dof_values[i].resize(_count);
-    auto dof = _dof_indices[i];
-    for (unsigned int j = 0; j < _count; ++j)
-    {
-      dof_values[i](j) = sol(dof);
-      dof += n;
-    }
-  }
-}
-
-template <typename OutputType>
-void
 MooseVariableDataFV<OutputType>::prepareIC()
 {
   _dof_map.dof_indices(_elem, _dof_indices, _var_num);
   _dof_values.resize(_dof_indices.size());
 
-  unsigned int nqp = _qrule->n_points();
+  unsigned int nqp = 1;
   _u.resize(nqp);
-}
-
-template <typename OutputType>
-void
-MooseVariableDataFV<OutputType>::prepare()
-{
-  _last_elem_id = _dof_map.dof_indices(_elem, _dof_indices, _var_num);
-}
-
-template <typename OutputType>
-void
-MooseVariableDataFV<OutputType>::prepareFace(const FaceInto & fi)
-{
-  if (_last_elem_id
-  _dof_map.dof_indices(_elem, _dof_indices, _var_num);
 }
 
 template <>

@@ -29,6 +29,7 @@ class SubProblem;
 class Factory;
 class Assembly;
 class MooseVariableFEBase;
+class MooseVariableFVBase;
 class MooseVariableScalar;
 template <typename>
 class MooseVariableFE;
@@ -226,12 +227,16 @@ public:
   virtual const std::set<MooseVariableFEBase *> &
   getActiveElementalMooseVariables(THREAD_ID tid) const;
 
+  virtual const std::set<MooseVariableFVBase *> & getActiveMooseVariablesFV(THREAD_ID tid) const;
+
   /**
    * Whether or not a list of active elemental moose variables has been set.
    *
    * @return True if there has been a list of active elemental moose variables set, False otherwise
    */
   virtual bool hasActiveElementalMooseVariables(THREAD_ID tid) const;
+
+  virtual bool hasActiveMooseVariablesFV(THREAD_ID tid) const;
 
   /**
    * Clear the active elemental MooseVariableFEBase.  If there are no active variables then they

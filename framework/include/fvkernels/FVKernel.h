@@ -22,7 +22,7 @@ class FVFluxKernel : public MooseObject,
 public:
   FVFluxKernel(const InputParameters & params);
 
-  virtual computeResidual(const FaceInfo & fi);
+  virtual void computeResidual(const FaceInfo & fi);
 
 protected:
   // material properties will be initialized on the face.  Reconstructed

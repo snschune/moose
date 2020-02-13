@@ -195,11 +195,6 @@ public:
   void clearDofIndices() { _dof_indices.clear(); }
 
   /**
-   * Get the dof indices corresponding to the current element
-   */
-  void prepare();
-
-  /**
    * Set the current local DOF values to the input vector
    */
   void insert(NumericVector<Number> & residual);

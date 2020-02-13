@@ -35,6 +35,8 @@ public:
 
   const Elem & leftElem() const;
   const Elem & rightElem() const;
+  unsigned int leftDofIndex() const;
+  unsigned int rightDofIndex() const;
   unsigned int leftSide() const;
   unsigned int rightSide() const;
 };
@@ -278,7 +280,7 @@ ComputeFVFaceResidualsThread<RangeType>::subdomainChanged()
   {
     const auto & deps = k->getMooseVariableDependencies();
     needed_moose_vars.insert(deps.begin(), deps.end());
-    const auto & mdeps = object->getMatPropDependencies();
+    const auto & mdeps = k->getMatPropDependencies();
     needed_mat_props.insert(mdeps.begin(), mdeps.end());
   }
 
@@ -287,8 +289,3 @@ ComputeFVFaceResidualsThread<RangeType>::subdomainChanged()
   _fe_problem.prepareMaterials(_subdomain, _tid);
 }
 
-template <typename RangeType>
-void
-ComputeFVFaceResidualsThread<RangeType>::neighborSubdomainChanged()
-{
-}

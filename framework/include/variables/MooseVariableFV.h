@@ -25,16 +25,6 @@
 class TimeIntegrator;
 template <typename>
 class MooseVariableFV;
-typedef MooseVariableFV<Real> MooseVariable;
-typedef MooseVariableFV<RealVectorValue> VectorMooseVariable;
-typedef MooseVariableFV<RealEigenVector> ArrayMooseVariable;
-
-template <>
-InputParameters validParams<MooseVariable>();
-template <>
-InputParameters validParams<VectorMooseVariable>();
-template <>
-InputParameters validParams<ArrayMooseVariable>();
 
 /**
  * Class for stuff related to variables
@@ -52,30 +42,30 @@ template <typename OutputType>
 class MooseVariableFV : public MooseVariableFVBase
 {
 public:
-  using OutputGradient = MooseVariableData::OutputGradient;
-  using OutputSecond = MooseVariableData::OutputSecond;
-  using OutputDivergence = MooseVariableData::OutputDivergence;
+  using OutputGradient = typename MooseVariableData<OutputType>::OutputGradient;
+  using OutputSecond = typename MooseVariableData<OutputType>::OutputSecond;
+  using OutputDivergence = typename MooseVariableData<OutputType>::OutputDivergence;
 
-  using FieldVariableValue = MooseVariableData::FieldVariableValue;
-  using FieldVariableGradient = MooseVariableData::FieldVariableGradient;
-  using FieldVariableSecond = MooseVariableData::FieldVariableSecond;
-  using FieldVariableCurl = MooseVariableData::FieldVariableCurl;
-  using FieldVariableDivergence = MooseVariableData::FieldVariableDivergence;
+  using FieldVariableValue = typename MooseVariableData<OutputType>::FieldVariableValue;
+  using FieldVariableGradient = typename MooseVariableData<OutputType>::FieldVariableGradient;
+  using FieldVariableSecond = typename MooseVariableData<OutputType>::FieldVariableSecond;
+  using FieldVariableCurl = typename MooseVariableData<OutputType>::FieldVariableCurl;
+  using FieldVariableDivergence = typename MooseVariableData<OutputType>::FieldVariableDivergence;
 
-  using OutputShape = MooseVariableData::OutputShape;
-  using OutputShapeGradient = MooseVariableData::OutputShapeGradient;
-  using OutputShapeSecond = MooseVariableData::OutputShapeSecond;
-  using OutputShapeDivergence = MooseVariableData::OutputShapeDivergence;
+  using OutputShape = typename MooseVariableData<OutputType>::OutputShape;
+  using OutputShapeGradient = typename MooseVariableData<OutputType>::OutputShapeGradient;
+  using OutputShapeSecond = typename MooseVariableData<OutputType>::OutputShapeSecond;
+  using OutputShapeDivergence = typename MooseVariableData<OutputType>::OutputShapeDivergence;
 
-  using OutputData = MooseVariableData::OutputData;
-  using DoFValue = MooseVariableData::DoFValue;
+  using OutputData = typename MooseVariableData<OutputType>::OutputData;
+  using DoFValue = typename MooseVariableData<OutputType>::DoFValue;
 
   MooseVariableFV(const InputParameters & parameters);
 
   void clearDofIndices() override;
 
-  void prepare() override;
-  void prepareFace(const FaceInfo & fi) override;
+  virtual void prepare() override;
+  virtual void prepareFace(const FaceInfo & fi) override;
 
   virtual void prepareIC() override;
 
