@@ -20,9 +20,17 @@
   [../]
 []
 
+[AuxVariables]
+  [./v]
+    family = MONOMIAL
+    order = CONSTANT
+  [../]
+[]
+
 [VectorPostprocessors]
   [./face_info]
     type = TestFaceInfo
+    vars = 'u v'
   [../]
 []
 

@@ -2863,7 +2863,8 @@ MooseMesh::buidFaceInfo()
         // this is a temporary face info object
         FaceInfo tfi;
         tfi.elements() = std::pair<const Elem *, const Elem *>(elem, neighbor);
-        tfi.sideIDs() = std::pair<unsigned int, unsigned int>(side, neighbor->which_neighbor_am_i(elem));
+        tfi.sideIDs() =
+            std::pair<unsigned int, unsigned int>(side, neighbor->which_neighbor_am_i(elem));
         tfi.centroids() = std::pair<Point, Point>(elem->centroid(), neighbor->centroid());
 
         // compute face area
@@ -2902,4 +2903,35 @@ MooseMesh::buidFaceInfo()
       }
     }
   }
+}
+
+void
+MooseMesh::FaceInfo::addCachedIndices(const VariableName & var_name,
+                                      std::vector<dof_id_type> left_dofs,
+                                      std::vector<dof_id_type> right_dofs)
+{
+  _cached_solution_vector_indices[var_name] =
+      std::pair<std::vector<dof_id_type>, std::vector<dof_id_type>>(left_dofs, right_dofs);
+}
+
+void
+MooseMesh::FaceInfo::cachedLeftIndices(const VariableName & var_name,
+                                       std::vector<dof_id_type> & dofs) const
+{
+  dofs.clear();
+  const auto & it = _cached_solution_vector_indices.find(var_name);
+  if (it == _cached_solution_vector_indices.end())
+    return;
+  dofs = it->second.first;
+}
+
+void
+MooseMesh::FaceInfo::cachedRightIndices(const VariableName & var_name,
+                                        std::vector<dof_id_type> & dofs) const
+{
+  dofs.clear();
+  const auto & it = _cached_solution_vector_indices.find(var_name);
+  if (it == _cached_solution_vector_indices.end())
+    return;
+  dofs = it->second.second;
 }

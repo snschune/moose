@@ -145,6 +145,14 @@ public:
     unsigned int rightSideID() const { return _adjacent_elem_sides.second; }
     ///@}
 
+    ///@{ this allows modifying and retrieving _cached_solution_vector_indices
+    void addCachedIndices(const VariableName & var_name,
+                          std::vector<dof_id_type> left_dofs,
+                          std::vector<dof_id_type> right_dofs);
+    void cachedLeftIndices(const VariableName & var_name, std::vector<dof_id_type> & dofs) const;
+    void cachedRightIndices(const VariableName & var_name, std::vector<dof_id_type> & dofs) const;
+    ///@}
+
   protected:
     /// the face areas
     Real _face_area;
@@ -163,6 +171,10 @@ public:
 
     /// the centroids of the adjacent element on the left and right
     Point _face_centroid;
+
+    /// cached locations of variables in solution vectors
+    std::map<std::string, std::pair<std::vector<dof_id_type>, std::vector<dof_id_type>>>
+        _cached_solution_vector_indices;
   };
 
   /**
@@ -964,7 +976,7 @@ public:
   unsigned int nFace() const { return _face_info.size(); }
   const std::vector<FaceInfo> & faceInfo() const { return _face_info; }
   std::vector<FaceInfo> & faceInfo() { return _face_info; }
-  //const
+  // const
   ///@}
 
 protected:

@@ -20,6 +20,7 @@ InputParameters
 TestFaceInfo::validParams()
 {
   InputParameters params = GeneralVectorPostprocessor::validParams();
+  params.addParam<std::vector<VariableName>>("vars", "Variable names");
   return params;
 }
 
@@ -44,6 +45,17 @@ TestFaceInfo::TestFaceInfo(const InputParameters & parameters)
     _right_cy(declareVector("right_cy")),
     _right_cz(declareVector("right_cz"))
 {
+  if (isParamValid("vars"))
+  {
+    _vars = getParam<std::vector<VariableName>>("vars");
+    for (auto & v : _vars)
+    {
+      _var_left_dof.push_back(&declareVector(v + "_left"));
+      _var_right_dof.push_back(&declareVector(v + "_right"));
+      _var_left_dof_size.push_back(&declareVector(v + "_size_left"));
+      _var_right_dof_size.push_back(&declareVector(v + "_size_right"));
+    }
+  }
 }
 
 void
@@ -88,6 +100,17 @@ TestFaceInfo::execute()
       mooseError("Mismatch of centroids and leftCentroid functions");
     if (p.centroids().second != rc)
       mooseError("Mismatch of centroids and rightCentroid functions");
+
+    for (unsigned int l = 0; l < _vars.size(); ++l)
+    {
+      std::vector<dof_id_type> dofs;
+      p.cachedLeftIndices(_vars[l], dofs);
+      _var_left_dof[l]->push_back(dofs[0]);
+      _var_left_dof_size[l]->push_back(dofs.size());
+      p.cachedRightIndices(_vars[l], dofs);
+      _var_right_dof[l]->push_back(dofs[0]);
+      _var_right_dof_size[l]->push_back(dofs.size());      
+    }
     ++j;
   }
 }

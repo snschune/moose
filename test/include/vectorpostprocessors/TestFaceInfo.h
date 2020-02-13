@@ -47,4 +47,10 @@ protected:
   VectorPostprocessorValue & _right_cx;
   VectorPostprocessorValue & _right_cy;
   VectorPostprocessorValue & _right_cz;
+
+  std::vector<VariableName> _vars;
+  std::vector<VectorPostprocessorValue *> _var_left_dof;
+  std::vector<VectorPostprocessorValue *> _var_right_dof;
+  std::vector<VectorPostprocessorValue *> _var_left_dof_size;
+  std::vector<VectorPostprocessorValue *> _var_right_dof_size;
 };
