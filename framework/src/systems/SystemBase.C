@@ -1067,12 +1067,24 @@ void
 SystemBase::update()
 {
   system().update();
+  std::vector<VariableName> std_field_variables;
+  getStandardFieldVariableNames(std_field_variables);
+  cacheVarIndicesByFace(std_field_variables);
 }
 
 void
 SystemBase::solve()
 {
   system().solve();
+}
+
+void
+SystemBase::getStandardFieldVariableNames(std::vector<VariableName> & std_field_variables) const
+{
+  std_field_variables.clear();
+  for (auto & p : _vars[0].fieldVariables())
+    if (p->fieldType() == 0)
+      std_field_variables.push_back(p->name());
 }
 
 /**
@@ -1153,6 +1165,41 @@ SystemBase::applyScalingFactors(const std::vector<Real> & inverse_scaling_factor
     for (MooseIndex(scalar_variables) i = 0; i < scalar_variables.size(); ++i)
       scalar_variables[i]->scalingFactor(1. / inverse_scaling_factors[offset + i] *
                                          scalar_variables[i]->scalingFactor());
+  }
+}
+
+void
+SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
+{
+  // prepare a vector of MooseVariables from names
+  std::vector<MooseVariable *> moose_vars;
+  for (auto & v : vars)
+  {
+    // first make sure this is not a scalar variable
+    if (hasScalarVariable(v))
+      mooseError("Variable ", v, " is a scalar variable");
+
+    // now make sure this is a standard variable [not array/vector]
+    if (getVariable(0, v).fieldType() != 0)
+      mooseError("Variable ", v, " not a standard field variable [either VECTOR or ARRAY].");
+    moose_vars.push_back(&getFieldVariable<Real>(0, v));
+  }
+
+  // loop over all faces
+  for (auto & p : mesh().faceInfo())
+  {
+    const Elem * left_elem = p.leftElem();
+    const Elem * right_elem = p.rightElem();
+
+    // loop through vars
+    for (unsigned int j = 0; j < moose_vars.size(); ++j)
+    {
+      std::vector<dof_id_type> left_dof_indices;
+      moose_vars[j]->getDofIndices(left_elem, left_dof_indices);
+      std::vector<dof_id_type> right_dof_indices;
+      moose_vars[j]->getDofIndices(right_elem, right_dof_indices);
+      p.addCachedIndices(vars[j], left_dof_indices, right_dof_indices);
+    }
   }
 }
 
