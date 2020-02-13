@@ -78,7 +78,7 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFE<Outpu
     _need_dof_du_dotdot_du(false),
     _time_integrator(nullptr),
     _elem(elem),
-    _displaced(dynamic_cast<const DisplacedSystem *>(&_sys) ? true : false),
+    _displaced(dynamic_cast<const DisplacedSystem *>(&_sys) ? true : false)
 {
   auto num_vector_tags = _sys.subproblem().numVectorTags();
 
@@ -315,8 +315,6 @@ template <typename OutputType>
 const typename MooseVariableDataFV<OutputType>::FieldVariableCurl &
 MooseVariableDataFV<OutputType>::curlSln(Moose::SolutionState state) const
 {
-  curlPhi();
-  curlPhiFace();
   switch (state)
   {
     case Moose::Current:
@@ -346,6 +344,10 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::initializeSolnVars()
 {
+  auto && active_coupleable_vector_tags =
+      _sys.subproblem().getActiveFEVariableCoupleableVectorTags(_tid);
+  auto && active_coupleable_matrix_tags =
+      _sys.subproblem().getActiveFEVariableCoupleableMatrixTags(_tid);
   unsigned int nqp = 1;
 
   _u.resize(nqp);

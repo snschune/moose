@@ -24,7 +24,7 @@ FVFluxKernel::FVFluxKernel(const InputParameters & params)
 {
 }
 
-Real
+void
 FVFluxKernel::computeResidual(const FaceInfo & fi)
 {
   _face_info = &fi;

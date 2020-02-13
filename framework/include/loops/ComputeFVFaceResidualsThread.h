@@ -14,25 +14,29 @@
 #include "MooseTypes.h"
 #include "MooseException.h"
 #include "FVKernel.h"
+#include "FEProblem.h"
+#include "SwapBackSentinel.h"
 #include "libmesh/libmesh_exceptions.h"
 #include "libmesh/elem.h"
+
+class FVBoundaryCondition;
 
 class FaceInfo
 {
 public:
   FaceInfo() {}
-  Real faceArea();
-  const RealVectorValue & unitNormalVec();
-  const std::vector<Point> & faceNodes();
+  Real faceArea() const;
+  const RealVectorValue & unitNormalVec() const;
+  const std::vector<Point> & faceNodes() const;
 
-  const Point & faceCentroid();
-  const Point & leftCentroid();
-  const Point & rightCentroid();
+  const Point & faceCentroid() const;
+  const Point & leftCentroid() const;
+  const Point & rightCentroid() const;
 
-  const Elem & leftElem();
-  const Elem & rightElem();
-  unsigned int leftSide();
-  unsigned int rightSide();
+  const Elem & leftElem() const;
+  const Elem & rightElem() const;
+  unsigned int leftSide() const;
+  unsigned int rightSide() const;
 };
 
 /**
@@ -227,7 +231,7 @@ ComputeFVFaceResidualsThread<RangeType>::onFace(const FaceInfo & fi)
   _fe_problem.reinitMaterialsNeighbor(fi.rightElem().subdomain_id(), _tid);
 
   for (const auto k : kernels)
-    auto r = k->computeResidual();
+    k->computeResidual(fi);
 }
 
 template <typename RangeType>
@@ -237,19 +241,19 @@ ComputeFVFaceResidualsThread<RangeType>::onBoundary(const FaceInfo & fi, Boundar
   std::vector<FVBoundaryCondition *> bcs;
   _fe_problem.theWarehouse()
       .query()
-      .condition<AttribSystem>("FVBC")
-      .condition<AttribBoundary>(bnd_id)
+      .template condition<AttribSystem>("FVBC")
+      .template condition<AttribBoundaries>(bnd_id)
       .queryInto(bcs);
   if (bcs.size() == 0)
     return;
 
-  _fe_problem.reinitElemFace(fi.leftElem(), fi.leftSide(), bnd_id, _tid);
+  _fe_problem.reinitFVFace(fi, _tid);
 
   // Set up Sentinel class so that, even if reinitMaterialsFace() throws, we
   // still remember to swap back during stack unwinding.
   SwapBackSentinel sentinel(_fe_problem, &FEProblem::swapBackMaterialsFace, _tid);
 
-  _fe_problem.reinitMaterialsFace(elem->subdomain_id(), _tid);
+  _fe_problem.reinitMaterialsFace(fi.leftElem().subdomain_id(), _tid);
   _fe_problem.reinitMaterialsBoundary(bnd_id, _tid);
 
   for (const auto & bc : bcs)
@@ -260,15 +264,15 @@ template <typename RangeType>
 void
 ComputeFVFaceResidualsThread<RangeType>::subdomainChanged()
 {
-  std::set<MooseVariableFEBase *> needed_mat_props;
+  std::set<MooseVariableBase *> needed_moose_vars;
   std::set<unsigned int> needed_mat_props;
 
-  // TODO: do this for other relevant objects - like FV BCs, etc.
-  std::vector<FVKernel *> kernels;
+  // TODO: do this for other relevant objects - like FV BCs, FV source term kernels, etc.
+  std::vector<FVFluxKernel *> kernels;
   _fe_problem.theWarehouse()
       .query()
-      .condition<AttribSystem>("FVFluxKernels")
-      .condition<AttribSubdomains>(_subdomain)
+      .template condition<AttribSystem>("FVFluxKernels")
+      .template condition<AttribSubdomains>(_subdomain)
       .queryInto(kernels);
   for (auto k : kernels)
   {
