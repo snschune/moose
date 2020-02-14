@@ -98,41 +98,23 @@ public:
   class FaceInfo
   {
   public:
-    FaceInfo();
+    FaceInfo(const Elem * elem, const Neighbor * neighbor);
 
     ///@{ returns the face area of face id
     Real area() const { return _face_area; }
-    void setArea(Real area) { _face_area = area; }
     ///@}
 
     ///@{ returns the face area of face id
     const Point & normal() const { return _normal; }
-    Point & normal() { return _normal; }
     ///@}
 
     ///@{ returns the face centroid
     const Point & faceCentroid() const { return _face_centroid; }
-    Point & faceCentroid() { return _face_centroid; }
-    ///@}
-
-    ///@{ returns the face area of face id
-    const std::pair<const Elem *, const Elem *> & elements() const { return _adjacent_elems; }
-    std::pair<const Elem *, const Elem *> & elements() { return _adjacent_elems; }
-    ///@}
-
-    ///@{ returns the local side ids for the elements on the left and the right
-    const std::pair<unsigned int, unsigned int> & sideIDs() const { return _adjacent_elem_sides; }
-    std::pair<unsigned int, unsigned int> & sideIDs() { return _adjacent_elem_sides; }
-    ///@}
-
-    ///@{ returns the centroids of the adjacent elements on the left and right
-    const std::pair<Point, Point> & centroids() const { return _adjacent_elem_centroids; }
-    std::pair<Point, Point> & centroids() { return _adjacent_elem_centroids; }
     ///@}
 
     ///@{ returns the left and right adjacent elements
-    const Elem * leftElem() const { return _adjacent_elems.first; }
-    const Elem * rightElem() const { return _adjacent_elems.second; }
+    const Elem * leftElem() const { return _left; }
+    const Elem * rightElem() const { return _right; }
     ///@}
 
     ///@{ returns the left and right centroids
@@ -154,26 +136,24 @@ public:
     ///@}
 
   protected:
-    /// the face areas
     Real _face_area;
-
-    /// the normals
+    Real _left_volume Real _right_volume;
     Point _normal;
 
-    /// the left and right elem points
-    std::pair<const Elem *, const Elem *> _adjacent_elems;
+    /// the left and right elems
+    const Elem * _left;
+    const Elem * _right;
 
     /// the left and right local side ids
-    std::pair<unsigned int, unsigned int> _adjacent_elem_sides;
+    unsigned int _left_side_id;
+    unsigned int _right_side_id;
 
-    /// the centroids of the adjacent element on the left and right
-    std::pair<Point, Point> _adjacent_elem_centroids;
-
-    /// the centroids of the adjacent element on the left and right
+    Point _left_centroid;
+    Point _right_centroid;
     Point _face_centroid;
 
     /// cached locations of variables in solution vectors
-    std::map<std::string, std::pair<std::vector<dof_id_type>, std::vector<dof_id_type>>>
+    std::unordered_map<std::string, std::pair<std::vector<dof_id_type>, std::vector<dof_id_type>>>
         _cached_solution_vector_indices;
   };
 
@@ -970,7 +950,7 @@ public:
   bool hasMeshBase() const { return _mesh.get() != nullptr; }
 
   /// builds the face info vector
-  void buidFaceInfo();
+  void buildFaceInfo();
 
   ///@{ accessors for the FaceInfo objects
   unsigned int nFace() const { return _face_info.size(); }

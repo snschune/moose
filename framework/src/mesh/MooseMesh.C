@@ -436,7 +436,7 @@ MooseMesh::update()
   cacheInfo();
 
   if (_needs_face_info)
-    buidFaceInfo();
+    buildFaceInfo();
 }
 
 const Node &
@@ -2829,10 +2829,51 @@ MooseMesh::getPointLocator() const
   return getMesh().sub_point_locator();
 }
 
-MooseMesh::FaceInfo::FaceInfo() {}
+MooseMesh::FaceInfo::FaceInfo(const Elem * elem, const Elem * neighbor)
+{
+  _left = elem;
+  _right = neighbor;
+
+  _left_side_id = elem->which_neighbor_am_i(neighbor);
+  _right_side_id = neighbor->which_neighbor_am_i(elem);
+  _left_centroid = elem->centroid();
+  _right_centroid = neighbor->centroid();
+
+  // compute face area
+  std::unique_ptr<const Elem> face = elem->build_side_ptr(_left_side_id);
+  _area = face->volume();
+  _left_volume = elem->volume();
+  _right_volume = neighbor->volume();
+
+  // 1. compute face centroid
+  // 2. compute an averaged normal (av. normal is identical to all qp normals for 1st order
+  //    meshes)
+  Order order = elem->default_order();
+  unsigned int dim = elem->dim();
+  std::unique_ptr<FEBase> fe(FEBase::build(dim, FEType(order)));
+  QGauss qface(dim - 1, FEType(order).default_quadrature_order());
+  fe->attach_quadrature_rule(&qface);
+
+  const std::vector<Real> & JxW = fe->get_JxW();
+  const std::vector<Point> & normals = fe->get_normals();
+  const std::vector<Point> & xyz = fe->get_xyz();
+
+  fe->reinit(elem, side);
+  Point average_normal;
+  Point face_centroid;
+  for (unsigned int j = 0; j < JxW.size(); ++j)
+  {
+    average_normal += JxW[j] * normals[j];
+    face_centroid += JxW[j] * xyz[j];
+  }
+  average_normal /= _area face_centroid /= _area
+
+      _normal = average_normal;
+  _face_centroid = face_centroid;
+}
 
 void
-MooseMesh::buidFaceInfo()
+MooseMesh::buildFaceInfo()
 {
   // clear data structures
   _face_info.clear();
@@ -2853,54 +2894,9 @@ MooseMesh::buidFaceInfo()
       if (!neighbor)
         continue;
 
-      // cannot retrieve the neighbor id before making sure there
-      // is a neighbor
-      const dof_id_type neighbor_id = neighbor->id();
-
       if ((neighbor->active() && (neighbor->level() == elem->level()) && (elem_id < neighbor_id)) ||
           (neighbor->level() < elem->level()))
-      {
-        // this is a temporary face info object
-        FaceInfo tfi;
-        tfi.elements() = std::pair<const Elem *, const Elem *>(elem, neighbor);
-        tfi.sideIDs() =
-            std::pair<unsigned int, unsigned int>(side, neighbor->which_neighbor_am_i(elem));
-        tfi.centroids() = std::pair<Point, Point>(elem->centroid(), neighbor->centroid());
-
-        // compute face area
-        std::unique_ptr<const Elem> face = elem->build_side_ptr(side);
-        tfi.setArea(face->volume());
-
-        // 1. compute face centroid
-        // 2. compute an averaged normal (av. normal is identical to all qp normals for 1st order
-        //    meshes)
-        Order order = elem->default_order();
-        unsigned int dim = elem->dim();
-        std::unique_ptr<FEBase> fe(FEBase::build(dim, FEType(order)));
-        QGauss qface(dim - 1, FEType(order).default_quadrature_order());
-        fe->attach_quadrature_rule(&qface);
-
-        const std::vector<Real> & JxW = fe->get_JxW();
-        const std::vector<Point> & normals = fe->get_normals();
-        const std::vector<Point> & xyz = fe->get_xyz();
-
-        fe->reinit(elem, side);
-        Point average_normal;
-        Point face_centroid;
-        for (unsigned int j = 0; j < JxW.size(); ++j)
-        {
-          average_normal += JxW[j] * normals[j];
-          face_centroid += JxW[j] * xyz[j];
-        }
-        average_normal /= tfi.area();
-        face_centroid /= tfi.area();
-
-        tfi.normal() = average_normal;
-        tfi.faceCentroid() = face_centroid;
-
-        // now add temporary object to vector of FaceInfo objects
-        _face_info.push_back(tfi);
-      }
+        _face_info.emplace_back(elem, neighbor);
     }
   }
 }
