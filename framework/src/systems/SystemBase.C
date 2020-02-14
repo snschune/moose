@@ -1187,7 +1187,7 @@ void
 SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
 {
   // prepare a vector of MooseVariables from names
-  std::vector<MooseVariable *> moose_vars;
+  std::vector<MooseVariableBase *> moose_vars;
   for (auto & v : vars)
   {
     // first make sure this is not a scalar variable
@@ -1203,17 +1203,22 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
   // loop over all faces
   for (auto & p : mesh().faceInfo())
   {
-    const Elem * left_elem = p.leftElem();
-    const Elem * right_elem = p.rightElem();
+    const Elem & left_elem = p.leftElem();
+    const Elem & right_elem = p.rightElem();
 
     // loop through vars
     for (unsigned int j = 0; j < moose_vars.size(); ++j)
     {
+      auto var = moose_vars[j];
+      auto var_num = var->number();
+
       std::vector<dof_id_type> left_dof_indices;
-      moose_vars[j]->getDofIndices(left_elem, left_dof_indices);
+      var->getDofIndices(&left_elem, left_dof_indices);
       std::vector<dof_id_type> right_dof_indices;
-      moose_vars[j]->getDofIndices(right_elem, right_dof_indices);
-      p.addCachedIndices(vars[j], left_dof_indices, right_dof_indices);
+      var->getDofIndices(&right_elem, right_dof_indices);
+
+      p.leftDofIndices(var_num) = left_dof_indices;
+      p.rightDofIndices(var_num) = right_dof_indices;
     }
   }
 }

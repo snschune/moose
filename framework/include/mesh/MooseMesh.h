@@ -68,6 +68,82 @@ public:
   Real _distance;
 };
 
+class FaceInfo
+{
+public:
+  FaceInfo(const Elem * elem, const Elem * neighbor);
+
+  ///@{ returns the face area of face id
+  Real faceArea() const { return _face_area; }
+  ///@}
+
+  ///@{ returns the face area of face id
+  const Point & normal() const { return _normal; }
+  ///@}
+
+  ///@{ returns the face centroid
+  const Point & faceCentroid() const { return _face_centroid; }
+  ///@}
+
+  ///@{ returns the left and right adjacent elements
+  const Elem & leftElem() const { return *_left; }
+  const Elem & rightElem() const { return *_right; }
+  ///@}
+
+  ///@{ returns the left and right centroids
+  const Point & leftCentroid() const { return _left_centroid; }
+  const Point & rightCentroid() const { return _right_centroid; }
+  ///@}
+
+  ///@{ returns the left and right centroids
+  unsigned int leftSideID() const { return _left_side_id; }
+  unsigned int rightSideID() const { return _right_side_id; }
+  ///@}
+
+  const std::vector<dof_id_type> & leftDofIndices(unsigned int var_number) const
+  {
+    return _left_dof_indices[var_number];
+  }
+  std::vector<dof_id_type> & leftDofIndices(unsigned int var_number)
+  {
+    if (_left_dof_indices.size() <= var_number)
+      _left_dof_indices.resize(var_number + 1);
+    return _left_dof_indices[var_number];
+  }
+  const std::vector<dof_id_type> & rightDofIndices(unsigned int var_number) const
+  {
+    return _right_dof_indices[var_number];
+  }
+  std::vector<dof_id_type> & rightDofIndices(unsigned int var_number)
+  {
+    if (_right_dof_indices.size() <= var_number)
+      _right_dof_indices.resize(var_number + 1);
+    return _right_dof_indices[var_number];
+  }
+
+private:
+  Real _face_area;
+  Real _left_volume;
+  Real _right_volume;
+  Point _normal;
+
+  /// the left and right elems
+  const Elem * _left;
+  const Elem * _right;
+
+  /// the left and right local side ids
+  unsigned int _left_side_id;
+  unsigned int _right_side_id;
+
+  Point _left_centroid;
+  Point _right_centroid;
+  Point _face_centroid;
+
+  /// cached locations of variables in solution vectors
+  std::vector<std::vector<dof_id_type>> _left_dof_indices;
+  std::vector<std::vector<dof_id_type>> _right_dof_indices;
+};
+
 /**
  * MooseMesh wraps a libMesh::Mesh object and enhances its capabilities
  * by caching additional data and storing more state.
@@ -93,68 +169,6 @@ public:
     DEFAULT,
     REPLICATED,
     DISTRIBUTED
-  };
-
-  class FaceInfo
-  {
-  public:
-    FaceInfo(const Elem * elem, const Neighbor * neighbor);
-
-    ///@{ returns the face area of face id
-    Real area() const { return _face_area; }
-    ///@}
-
-    ///@{ returns the face area of face id
-    const Point & normal() const { return _normal; }
-    ///@}
-
-    ///@{ returns the face centroid
-    const Point & faceCentroid() const { return _face_centroid; }
-    ///@}
-
-    ///@{ returns the left and right adjacent elements
-    const Elem * leftElem() const { return _left; }
-    const Elem * rightElem() const { return _right; }
-    ///@}
-
-    ///@{ returns the left and right centroids
-    const Point & leftCentroid() const { return _adjacent_elem_centroids.first; }
-    const Point & rightCentroid() const { return _adjacent_elem_centroids.second; }
-    ///@}
-
-    ///@{ returns the left and right centroids
-    unsigned int leftSideID() const { return _adjacent_elem_sides.first; }
-    unsigned int rightSideID() const { return _adjacent_elem_sides.second; }
-    ///@}
-
-    ///@{ this allows modifying and retrieving _cached_solution_vector_indices
-    void addCachedIndices(const VariableName & var_name,
-                          std::vector<dof_id_type> left_dofs,
-                          std::vector<dof_id_type> right_dofs);
-    void cachedLeftIndices(const VariableName & var_name, std::vector<dof_id_type> & dofs) const;
-    void cachedRightIndices(const VariableName & var_name, std::vector<dof_id_type> & dofs) const;
-    ///@}
-
-  protected:
-    Real _face_area;
-    Real _left_volume Real _right_volume;
-    Point _normal;
-
-    /// the left and right elems
-    const Elem * _left;
-    const Elem * _right;
-
-    /// the left and right local side ids
-    unsigned int _left_side_id;
-    unsigned int _right_side_id;
-
-    Point _left_centroid;
-    Point _right_centroid;
-    Point _face_centroid;
-
-    /// cached locations of variables in solution vectors
-    std::unordered_map<std::string, std::pair<std::vector<dof_id_type>, std::vector<dof_id_type>>>
-        _cached_solution_vector_indices;
   };
 
   /**

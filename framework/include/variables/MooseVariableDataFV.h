@@ -25,6 +25,9 @@
 
 class FaceInfo;
 
+template <typename>
+class MooseVariableFV;
+
 template <typename OutputType>
 class MooseVariableDataFV
 {
@@ -47,7 +50,7 @@ public:
   using OutputData = typename MooseVariableData<OutputType>::OutputData;
   using DoFValue = typename MooseVariableData<OutputType>::DoFValue;
 
-  MooseVariableDataFV(const MooseVariableFE<OutputType> & var,
+  MooseVariableDataFV(const MooseVariableFV<OutputType> & var,
                       const SystemBase & sys,
                       THREAD_ID tid,
                       Moose::ElementType element_type,
@@ -189,7 +192,7 @@ public:
 
   ///////////////////////////// dof indices ///////////////////////////////////////////////
 
-  void getDofIndices(const Elem * elem, std::vector<dof_id_type> & dof_indices) const;
+  virtual void getDofIndices(const Elem * elem, std::vector<dof_id_type> & dof_indices) const;
   const std::vector<dof_id_type> & dofIndices() const { return _dof_indices; }
   unsigned int numberOfDofs() const { return _dof_indices.size(); }
   void clearDofIndices() { _dof_indices.clear(); }
@@ -268,7 +271,7 @@ private:
   int64_t _last_neighbor_id;
 
   /// A const reference to the owning MooseVariableFE object
-  const MooseVariableFE<OutputType> & _var;
+  const MooseVariableFV<OutputType> & _var;
 
   const FEType & _fe_type;
 
@@ -465,9 +468,6 @@ MooseVariableDataFV<OutputType>::adDofValues() const
 }
 
 ////////////////////////// Forward declaration of fully specialized templates //////////////////
-
-template <>
-void MooseVariableDataFV<RealEigenVector>::fetchDoFValues();
 
 template <>
 template <>

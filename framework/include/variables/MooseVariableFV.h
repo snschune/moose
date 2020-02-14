@@ -13,7 +13,7 @@
 #include "MooseVariableFVBase.h"
 #include "SubProblem.h"
 #include "MooseMesh.h"
-#include "MooseVariableData.h"
+#include "MooseVariableDataFV.h"
 
 #include "libmesh/numeric_vector.h"
 #include "libmesh/dof_map.h"
@@ -64,9 +64,6 @@ public:
 
   void clearDofIndices() override;
 
-  virtual void prepare() override;
-  virtual void prepareFace(const FaceInfo & fi) override;
-
   virtual void prepareIC() override;
 
   const std::set<SubdomainID> & activeSubdomains() const override;
@@ -81,8 +78,17 @@ public:
     return _neighbor_data->currentElem();
   }
 
-  const std::vector<dof_id_type> & dofIndices() const final { return _element_data->dofIndices(); }
-  const std::vector<dof_id_type> & dofIndicesNeighbor() const final
+  virtual void getDofIndices(const Elem * elem,
+                             std::vector<dof_id_type> & dof_indices) const override
+  {
+    return _element_data->getDofIndices(elem, dof_indices);
+  }
+
+  virtual const std::vector<dof_id_type> & dofIndices() const final
+  {
+    return _element_data->dofIndices();
+  }
+  virtual const std::vector<dof_id_type> & dofIndicesNeighbor() const final
   {
     return _neighbor_data->dofIndices();
   }
@@ -250,10 +256,10 @@ public:
 
 protected:
   /// Holder for all the data associated with the "main" element
-  std::unique_ptr<MooseVariableData<OutputType>> _element_data;
+  std::unique_ptr<MooseVariableDataFV<OutputType>> _element_data;
 
   /// Holder for all the data associated with the neighbor element
-  std::unique_ptr<MooseVariableData<OutputType>> _neighbor_data;
+  std::unique_ptr<MooseVariableDataFV<OutputType>> _neighbor_data;
 };
 
 template <typename OutputType>

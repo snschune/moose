@@ -19,17 +19,10 @@ template <typename OutputType>
 MooseVariableFV<OutputType>::MooseVariableFV(const InputParameters & parameters)
   : MooseVariableFVBase(parameters)
 {
-  _element_data = libmesh_make_unique<MooseVariableData<OutputType>>(*this,
-                                                                     _sys,
-                                                                     _tid,
-                                                                     Moose::ElementType::Element,
-                                                                     _assembly.elem());
-  _neighbor_data =
-      libmesh_make_unique<MooseVariableData<OutputType>>(*this,
-                                                         _sys,
-                                                         _tid,
-                                                         Moose::ElementType::Neighbor,
-                                                         _assembly.neighbor());
+  _element_data = libmesh_make_unique<MooseVariableDataFV<OutputType>>(
+      *this, _sys, _tid, Moose::ElementType::Element, _assembly.elem());
+  _neighbor_data = libmesh_make_unique<MooseVariableDataFV<OutputType>>(
+      *this, _sys, _tid, Moose::ElementType::Neighbor, _assembly.neighbor());
 }
 
 template <typename OutputType>
@@ -65,28 +58,6 @@ void
 MooseVariableFV<OutputType>::clearDofIndices()
 {
   _element_data->clearDofIndices();
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::prepare()
-{
-  _element_data->prepare();
-}
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::prepareFace(const FaceInfo & fi)
-{
-  _element_data->prepareFace(fi);
-  _neighbor_data->prepareFace(fi);
-}
-
-template <typename OutputType>
-void
-MooseVariableFV<OutputType>::getDofIndices(const Elem * elem,
-                                           std::vector<dof_id_type> & dof_indices) const
-{
-  _element_data->getDofIndices(elem, dof_indices);
 }
 
 template <typename OutputType>
@@ -313,25 +284,6 @@ MooseVariableFV<OutputType>::getValue(const Elem * elem) const
   return value;
 }
 
-template <>
-RealEigenVector
-MooseVariableFV<RealEigenVector>::getValue(const Elem * elem) const
-{
-  std::vector<dof_id_type> dof_indices;
-  _dof_map.dof_indices(elem, dof_indices, _var_num);
-
-  RealEigenVector value(_count);
-  mooseAssert(dof_indices.size() == 1, "Wrong size for dof indices");
-  unsigned int n = 0;
-  for (unsigned int j = 0; j < _count; j++)
-  {
-    value(j) = (*_sys.currentSolution())(dof_indices[0] + n);
-    n += _dof_indices.size();
-  }
-
-  return value;
-}
-
 template <typename OutputType>
 typename OutputTools<OutputType>::OutputGradient
 MooseVariableFV<OutputType>::getGradient(const Elem * elem) const
@@ -362,4 +314,3 @@ MooseVariableFV<OutputType>::isVector() const
 
 template class MooseVariableFV<Real>;
 template class MooseVariableFV<RealVectorValue>;
-template class MooseVariableFV<RealEigenVector>;

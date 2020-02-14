@@ -33,12 +33,6 @@ public:
   /// Clear out the dof indices.  We do this in case this variable is not going to be prepared.
   virtual void clearDofIndices() = 0;
 
-  /// Prepare the elemental degrees of freedom
-  virtual void prepare() = 0;
-
-  /// Prepare the element+neighbor element degrees of freedom for the given face
-  virtual void prepareFace(const FaceInfo & fi) = 0;
-
   /// Prepare the initial condition
   virtual void prepareIC() = 0;
 

@@ -22,7 +22,7 @@
 #include "libmesh/type_n_tensor.h"
 
 template <typename OutputType>
-MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFE<OutputType> & var,
+MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFV<OutputType> & var,
                                                      const SystemBase & sys,
                                                      THREAD_ID tid,
                                                      Moose::ElementType element_type,
@@ -498,12 +498,12 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::computeValuesFace(const FaceInfo & fi)
 {
-  if (_last_elem_id == fi.leftElem()->id() && _last_neighbor_id == fi.rightElem()->id())
+  if (_last_elem_id == fi.leftElem().id() && _last_neighbor_id == fi.rightElem().id())
     return;
 
   _dof_map.dof_indices(_elem, _dof_indices, _var_num);
-  _last_elem_id = fi.leftElem()->id();
-  _last_neighbor_id = fi.rightElem()->id();
+  _last_elem_id = fi.leftElem().id();
+  _last_neighbor_id = fi.rightElem().id();
 
   // TODO: compute reconstructed values somehow.  For now, just do the trivial
   // reconstruction where we take the const cell value from the centroid and
@@ -522,8 +522,8 @@ MooseVariableDataFV<OutputType>::computeValuesFace(const FaceInfo & fi)
   DoFValue values;
   values.resize(1);
   auto & soln = *_sys.currentSolution();
-  Real uleft = soln(fi.leftDofIndex());
-  Real uright = soln(fi.rightDofIndex());
+  auto uleft = soln(fi.leftDofIndices(_var_num)[0]);
+  auto uright = soln(fi.rightDofIndices(_var_num)[0]);
   _grad_u[0] = (uright - uleft) / ((fi.rightCentroid() - fi.leftCentroid()).norm());
 
   // TODO: figure out how to store old/older values of reconstructed
@@ -640,6 +640,7 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::computeAD(const unsigned int num_dofs, const unsigned int nqp)
 {
+  /*
   _ad_dof_values.resize(num_dofs);
   if (_need_ad_u)
     _ad_u.resize(nqp);
@@ -762,14 +763,7 @@ MooseVariableDataFV<OutputType>::computeAD(const unsigned int num_dofs, const un
   if (_need_ad_u_dot && !_time_integrator)
     for (MooseIndex(nqp) qp = 0; qp < nqp; ++qp)
       _ad_u_dot[qp] = _u_dot[qp];
-}
-
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::computeAD(const unsigned int /*num_dofs*/,
-                                                const unsigned int /*nqp*/)
-{
-  mooseError("AD for array variable has not been implemented");
+*/
 }
 
 template <typename OutputType>
@@ -812,42 +806,6 @@ MooseVariableDataFV<OutputType>::getElementalValue(const Elem * elem,
   }
 }
 
-template <>
-RealEigenVector
-MooseVariableDataFV<RealEigenVector>::getElementalValue(const Elem * elem,
-                                                        Moose::SolutionState state,
-                                                        unsigned int idx) const
-{
-  std::vector<dof_id_type> dof_indices;
-  _dof_map.dof_indices(elem, dof_indices, _var_num);
-
-  dof_id_type dof = dof_indices[idx];
-
-  RealEigenVector v(_count);
-
-  switch (state)
-  {
-    case Moose::Current:
-      for (unsigned int i = 0; i < _count; ++i)
-        v(i) = (*_sys.currentSolution())(dof++);
-      break;
-
-    case Moose::Old:
-      for (unsigned int i = 0; i < _count; ++i)
-        v(i) = _sys.solutionOld()(dof++);
-      break;
-
-    case Moose::Older:
-      for (unsigned int i = 0; i < _count; ++i)
-        v(i) = _sys.solutionOlder()(dof++);
-      break;
-
-    default:
-      mooseError("PreviousNL not currently supported for getElementalValue");
-  }
-  return v;
-}
-
 template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::getDofIndices(const Elem * elem,
@@ -863,37 +821,11 @@ MooseVariableDataFV<OutputType>::insert(NumericVector<Number> & residual)
   residual.insert(&_dof_values[0], _dof_indices);
 }
 
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::insert(NumericVector<Number> & residual)
-{
-  unsigned int n = 0;
-  for (unsigned int j = 0; j < _count; ++j)
-  {
-    for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-      residual.set(_dof_indices[i] + n, _dof_values[i](j));
-    n += _dof_indices.size();
-  }
-}
-
 template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::add(NumericVector<Number> & residual)
 {
   residual.add_vector(&_dof_values[0], _dof_indices);
-}
-
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::add(NumericVector<Number> & residual)
-{
-  unsigned int n = 0;
-  for (unsigned int j = 0; j < _count; ++j)
-  {
-    for (unsigned int i = 0; i < _dof_indices.size(); ++i)
-      residual.add(_dof_indices[i] + n, _dof_values[i](j));
-    n += _dof_indices.size();
-  }
 }
 
 template <typename OutputType>
@@ -1136,13 +1068,6 @@ MooseVariableDataFV<OutputType>::fetchADDoFValues()
   }
 }
 
-template <>
-void
-MooseVariableDataFV<RealEigenVector>::fetchADDoFValues()
-{
-  mooseError("I do not know how to support AD with array variables");
-}
-
 template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::zeroSizeDofValues()
@@ -1259,4 +1184,3 @@ MooseVariableDataFV<RealVectorValue>::adDofValues<RESIDUAL>() const
 
 template class MooseVariableDataFV<Real>;
 template class MooseVariableDataFV<RealVectorValue>;
-template class MooseVariableDataFV<RealEigenVector>;

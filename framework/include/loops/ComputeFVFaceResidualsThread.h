@@ -20,26 +20,7 @@
 #include "libmesh/elem.h"
 
 class FVBoundaryCondition;
-
-class FaceInfo
-{
-public:
-  FaceInfo() {}
-  Real faceArea() const;
-  const RealVectorValue & unitNormalVec() const;
-  const std::vector<Point> & faceNodes() const;
-
-  const Point & faceCentroid() const;
-  const Point & leftCentroid() const;
-  const Point & rightCentroid() const;
-
-  const Elem & leftElem() const;
-  const Elem & rightElem() const;
-  unsigned int leftDofIndex() const;
-  unsigned int rightDofIndex() const;
-  unsigned int leftSide() const;
-  unsigned int rightSide() const;
-};
+class FaceInfo;
 
 /**
  * Base class for assembly-like calculations.
@@ -259,7 +240,7 @@ ComputeFVFaceResidualsThread<RangeType>::onBoundary(const FaceInfo & fi, Boundar
   _fe_problem.reinitMaterialsBoundary(bnd_id, _tid);
 
   for (const auto & bc : bcs)
-    bc->computeResidual();
+    /*TODO: implement FV BCs - so we can bc->computeResidual(); here*/;
 }
 
 template <typename RangeType>

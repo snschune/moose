@@ -60,6 +60,50 @@
 static const int GRAIN_SIZE =
     1; // the grain_size does not have much influence on our execution speed
 
+FaceInfo::FaceInfo(const Elem * elem, const Elem * neighbor)
+{
+  _left = elem;
+  _right = neighbor;
+
+  _left_side_id = elem->which_neighbor_am_i(neighbor);
+  _right_side_id = neighbor->which_neighbor_am_i(elem);
+  _left_centroid = elem->centroid();
+  _right_centroid = neighbor->centroid();
+
+  _left_volume = elem->volume();
+  _right_volume = neighbor->volume();
+
+  std::unique_ptr<const Elem> face = elem->build_side_ptr(_left_side_id);
+  _face_area = face->volume();
+
+  // 1. compute face centroid
+  // 2. compute an averaged normal (av. normal is identical to all qp normals for 1st order
+  //    meshes)
+  Order order = elem->default_order();
+  unsigned int dim = elem->dim();
+  std::unique_ptr<FEBase> fe(FEBase::build(dim, FEType(order)));
+  QGauss qface(dim - 1, FEType(order).default_quadrature_order());
+  fe->attach_quadrature_rule(&qface);
+
+  const std::vector<Real> & JxW = fe->get_JxW();
+  const std::vector<Point> & normals = fe->get_normals();
+  const std::vector<Point> & xyz = fe->get_xyz();
+
+  fe->reinit(elem, _left_side_id);
+  Point average_normal;
+  Point face_centroid;
+  for (unsigned int j = 0; j < JxW.size(); ++j)
+  {
+    average_normal += JxW[j] * normals[j];
+    face_centroid += JxW[j] * xyz[j];
+  }
+  average_normal /= _face_area;
+  face_centroid /= _face_area;
+
+  _normal = average_normal;
+  _face_centroid = face_centroid;
+}
+
 defineLegacyParams(MooseMesh);
 
 InputParameters
@@ -2829,49 +2873,6 @@ MooseMesh::getPointLocator() const
   return getMesh().sub_point_locator();
 }
 
-MooseMesh::FaceInfo::FaceInfo(const Elem * elem, const Elem * neighbor)
-{
-  _left = elem;
-  _right = neighbor;
-
-  _left_side_id = elem->which_neighbor_am_i(neighbor);
-  _right_side_id = neighbor->which_neighbor_am_i(elem);
-  _left_centroid = elem->centroid();
-  _right_centroid = neighbor->centroid();
-
-  // compute face area
-  std::unique_ptr<const Elem> face = elem->build_side_ptr(_left_side_id);
-  _area = face->volume();
-  _left_volume = elem->volume();
-  _right_volume = neighbor->volume();
-
-  // 1. compute face centroid
-  // 2. compute an averaged normal (av. normal is identical to all qp normals for 1st order
-  //    meshes)
-  Order order = elem->default_order();
-  unsigned int dim = elem->dim();
-  std::unique_ptr<FEBase> fe(FEBase::build(dim, FEType(order)));
-  QGauss qface(dim - 1, FEType(order).default_quadrature_order());
-  fe->attach_quadrature_rule(&qface);
-
-  const std::vector<Real> & JxW = fe->get_JxW();
-  const std::vector<Point> & normals = fe->get_normals();
-  const std::vector<Point> & xyz = fe->get_xyz();
-
-  fe->reinit(elem, side);
-  Point average_normal;
-  Point face_centroid;
-  for (unsigned int j = 0; j < JxW.size(); ++j)
-  {
-    average_normal += JxW[j] * normals[j];
-    face_centroid += JxW[j] * xyz[j];
-  }
-  average_normal /= _area face_centroid /= _area
-
-      _normal = average_normal;
-  _face_centroid = face_centroid;
-}
-
 void
 MooseMesh::buildFaceInfo()
 {
@@ -2894,40 +2895,11 @@ MooseMesh::buildFaceInfo()
       if (!neighbor)
         continue;
 
-      if ((neighbor->active() && (neighbor->level() == elem->level()) && (elem_id < neighbor_id)) ||
+      if ((neighbor->active() && (neighbor->level() == elem->level()) &&
+           (elem_id < neighbor->id())) ||
           (neighbor->level() < elem->level()))
         _face_info.emplace_back(elem, neighbor);
     }
   }
 }
 
-void
-MooseMesh::FaceInfo::addCachedIndices(const VariableName & var_name,
-                                      std::vector<dof_id_type> left_dofs,
-                                      std::vector<dof_id_type> right_dofs)
-{
-  _cached_solution_vector_indices[var_name] =
-      std::pair<std::vector<dof_id_type>, std::vector<dof_id_type>>(left_dofs, right_dofs);
-}
-
-void
-MooseMesh::FaceInfo::cachedLeftIndices(const VariableName & var_name,
-                                       std::vector<dof_id_type> & dofs) const
-{
-  dofs.clear();
-  const auto & it = _cached_solution_vector_indices.find(var_name);
-  if (it == _cached_solution_vector_indices.end())
-    return;
-  dofs = it->second.first;
-}
-
-void
-MooseMesh::FaceInfo::cachedRightIndices(const VariableName & var_name,
-                                        std::vector<dof_id_type> & dofs) const
-{
-  dofs.clear();
-  const auto & it = _cached_solution_vector_indices.find(var_name);
-  if (it == _cached_solution_vector_indices.end())
-    return;
-  dofs = it->second.second;
-}
