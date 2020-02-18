@@ -128,6 +128,7 @@ addActionTypes(Syntax & syntax)
   registerMooseObjectTask("add_aux_scalar_kernel",        AuxScalarKernel,        false);
   registerMooseObjectTask("add_dirac_kernel",             DiracKernel,            false);
   registerMooseObjectTask("add_dg_kernel",                DGKernel,               false);
+  registerMooseObjectTask("add_fv_kernel",                FVKernel,               false);
   registerMooseObjectTask("add_interface_kernel",         InterfaceKernel,        false);
   appendMooseObjectTask  ("add_interface_kernel",         VectorInterfaceKernel);
   registerMooseObjectTask("add_constraint",               Constraint,             false);
@@ -485,6 +486,7 @@ associateSyntaxInner(Syntax & syntax, ActionFactory & /*action_factory*/)
   registerSyntax("AddDiracKernelAction", "DiracKernels/*");
 
   registerSyntax("AddDGKernelAction", "DGKernels/*");
+  registerSyntax("AddFVKernelAction", "FVKernels/*");
 
   registerSyntax("AddInterfaceKernelAction", "InterfaceKernels/*");
 

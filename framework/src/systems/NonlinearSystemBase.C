@@ -561,6 +561,25 @@ NonlinearSystemBase::addDGKernel(std::string dg_kernel_name,
 }
 
 void
+NonlinearSystemBase::addFVFluxKernel(std::string fv_kernel_name,
+                                 const std::string & name,
+                                 InputParameters & parameters)
+{
+  for (THREAD_ID tid = 0; tid < libMesh::n_threads(); ++tid)
+  {
+    auto fv_kernel = _factory.create<FVFluxKernel>(fv_kernel_name, name, parameters, tid);
+    _fv_kernels.addObject(fv_kernel, tid);
+  }
+
+  _doing_dg = true;
+
+  if (parameters.get<std::vector<AuxVariableName>>("save_in").size() > 0)
+    _has_save_in = true;
+  if (parameters.get<std::vector<AuxVariableName>>("diag_save_in").size() > 0)
+    _has_diag_save_in = true;
+}
+
+void
 NonlinearSystemBase::addInterfaceKernel(std::string interface_kernel_name,
                                         const std::string & name,
                                         InputParameters & parameters)
