@@ -26,6 +26,7 @@ TestFaceInfo::validParams()
 
 TestFaceInfo::TestFaceInfo(const InputParameters & parameters)
   : GeneralVectorPostprocessor(parameters),
+    Coupleable(this, false),
     _face_id(declareVector("id")),
     _face_area(declareVector("area")),
     _left_element_id(declareVector("left_elem")),
@@ -65,9 +66,9 @@ TestFaceInfo::execute()
   for (auto & p : _fe_problem.mesh().faceInfo())
   {
     _face_id.push_back(j);
-    _face_area.push_back(p.area());
-    _left_element_id.push_back(p.leftElem()->id());
-    _right_element_id.push_back(p.rightElem()->id());
+    _face_area.push_back(p.faceArea());
+    _left_element_id.push_back(p.leftElem().id());
+    _right_element_id.push_back(p.rightElem().id());
     _left_element_side.push_back(p.leftSideID());
     _right_element_side.push_back(p.rightSideID());
 
@@ -88,28 +89,15 @@ TestFaceInfo::execute()
     _right_cy.push_back(rc(1));
     _right_cz.push_back(rc(2));
 
-    if (p.leftElem() != p.elements().first)
-      mooseError("Mismatch of elements and leftElem functions");
-    if (p.rightElem() != p.elements().second)
-      mooseError("Mismatch of elements and leftElem functions");
-    if (p.leftSideID() != p.sideIDs().first)
-      mooseError("Mismatch of sideIDs and leftSideID functions");
-    if (p.rightSideID() != p.sideIDs().second)
-      mooseError("Mismatch of sideIDs and rightSideID functions");
-    if (p.centroids().first != lc)
-      mooseError("Mismatch of centroids and leftCentroid functions");
-    if (p.centroids().second != rc)
-      mooseError("Mismatch of centroids and rightCentroid functions");
-
     for (unsigned int l = 0; l < _vars.size(); ++l)
     {
-      std::vector<dof_id_type> dofs;
-      p.cachedLeftIndices(_vars[l], dofs);
+      auto var_num = coupled(_vars[l]);
+      auto & dofs = p.leftDofIndices(var_num);
       _var_left_dof[l]->push_back(dofs[0]);
       _var_left_dof_size[l]->push_back(dofs.size());
-      p.cachedRightIndices(_vars[l], dofs);
+      dofs = p.rightDofIndices(var_num);
       _var_right_dof[l]->push_back(dofs[0]);
-      _var_right_dof_size[l]->push_back(dofs.size());      
+      _var_right_dof_size[l]->push_back(dofs.size());
     }
     ++j;
   }

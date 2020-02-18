@@ -10,6 +10,7 @@
 #pragma once
 
 #include "GeneralVectorPostprocessor.h"
+#include "Coupleable.h"
 
 // Forward Declarations
 class TestFaceInfo;
@@ -18,7 +19,7 @@ class MooseMesh;
 template <>
 InputParameters validParams<TestFaceInfo>();
 
-class TestFaceInfo : public GeneralVectorPostprocessor
+class TestFaceInfo : public GeneralVectorPostprocessor, public Coupleable
 {
 public:
   static InputParameters validParams();
