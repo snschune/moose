@@ -4,13 +4,15 @@
 
 #include "ComputeFVFaceResidualsThread.h"
 
+FVKernel::FVKernel(const InputParameters & params)
+  : MooseObject(params), TaggingInterface(this), TransientInterface(this), BlockRestrictable(this)
+{
+}
+
 FVFluxKernel::FVFluxKernel(const InputParameters & params)
-  : MooseObject(params),
-    TaggingInterface(this),
-    TransientInterface(this),
-    BlockRestrictable(this),
+  : FVKernel(params),
     TwoMaterialPropertyInterface(this, blockIDs(), {}),
-    NeighborCoupleableMooseVariableDependencyIntermediateInterface(this, false, false),
+    NeighborCoupleable(this, false, false),
     NeighborMooseVariableInterface(
         this, false, Moose::VarKindType::VAR_NONLINEAR, Moose::VarFieldType::VAR_FIELD_STANDARD),
     _var(*mooseVariable()),

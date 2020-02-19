@@ -29,7 +29,6 @@ class SubProblem;
 class Factory;
 class Assembly;
 class MooseVariableFEBase;
-class MooseVariableFVBase;
 class MooseVariableScalar;
 template <typename>
 class MooseVariableFE;
@@ -227,16 +226,12 @@ public:
   virtual const std::set<MooseVariableFEBase *> &
   getActiveElementalMooseVariables(THREAD_ID tid) const;
 
-  virtual const std::set<MooseVariableFVBase *> & getActiveMooseVariablesFV(THREAD_ID tid) const;
-
   /**
    * Whether or not a list of active elemental moose variables has been set.
    *
    * @return True if there has been a list of active elemental moose variables set, False otherwise
    */
   virtual bool hasActiveElementalMooseVariables(THREAD_ID tid) const;
-
-  virtual bool hasActiveMooseVariablesFV(THREAD_ID tid) const;
 
   /**
    * Clear the active elemental MooseVariableFEBase.  If there are no active variables then they
@@ -351,7 +346,6 @@ public:
   virtual void setNeighborSubdomainID(const Elem * elem, unsigned int side, THREAD_ID tid) = 0;
   virtual void prepareAssembly(THREAD_ID tid) = 0;
 
-  virtual void reinitFVFace(const FaceInfo & fi, THREAD_ID tid) = 0;
   virtual void reinitElem(const Elem * elem, THREAD_ID tid) = 0;
   virtual void reinitElemPhys(const Elem * elem,
                               const std::vector<Point> & phys_points_in_elem,

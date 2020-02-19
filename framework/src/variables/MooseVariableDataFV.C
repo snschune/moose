@@ -28,9 +28,7 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFV<Outpu
                                                      Moose::ElementType element_type,
                                                      const Elem * const & elem)
 
-  : _last_elem_id(-1),
-    _last_neighbor_id(-1),
-    _var(var),
+  : _var(var),
     _fe_type(_var.feType()),
     _var_num(_var.number()),
     _sys(sys),
@@ -498,12 +496,7 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::computeValuesFace(const FaceInfo & fi)
 {
-  if (_last_elem_id == fi.leftElem().id() && _last_neighbor_id == fi.rightElem().id())
-    return;
-
   _dof_map.dof_indices(_elem, _dof_indices, _var_num);
-  _last_elem_id = fi.leftElem().id();
-  _last_neighbor_id = fi.rightElem().id();
 
   // TODO: compute reconstructed values somehow.  For now, just do the trivial
   // reconstruction where we take the const cell value from the centroid and
@@ -537,11 +530,7 @@ template <typename OutputType>
 void
 MooseVariableDataFV<OutputType>::computeValues(bool force)
 {
-  if (!force && (_last_elem_id == _elem->id()))
-    return;
-
   _dof_map.dof_indices(_elem, _dof_indices, _var_num);
-  _last_elem_id = _elem->id();
 
   unsigned int num_dofs = _dof_indices.size();
 

@@ -267,9 +267,6 @@ private:
   void fetchADDoFValues();
   void zeroSizeDofValues();
 
-  int64_t _last_elem_id;
-  int64_t _last_neighbor_id;
-
   /// A const reference to the owning MooseVariableFE object
   const MooseVariableFV<OutputType> & _var;
 

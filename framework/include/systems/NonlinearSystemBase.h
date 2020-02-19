@@ -199,15 +199,6 @@ public:
   addDGKernel(std::string dg_kernel_name, const std::string & name, InputParameters & parameters);
 
   /**
-   * Adds a DG kernel
-   * @param dg_kernel_name The type of the DG kernel
-   * @param name The name of the DG kernel
-   * @param parameters DG kernel parameters
-   */
-  void
-  addFVFluxKernel(std::string fv_kernel_name, const std::string & name, InputParameters & parameters);
-
-  /**
    * Adds an interface kernel
    * @param interface_kernel_name The type of the interface kernel
    * @param name The name of the interface kernel
@@ -580,7 +571,6 @@ public:
     return _ad_jacobian_kernels;
   }
   MooseObjectTagWarehouse<DGKernelBase> & getDGKernelWarehouse() { return _dg_kernels; }
-  MooseObjectTagWarehouse<FVFluxKernel> & getFVFluxKernelWarehouse() { return _fv_kernels; }
   MooseObjectTagWarehouse<InterfaceKernelBase> & getInterfaceKernelWarehouse()
   {
     return _interface_kernels;
@@ -811,7 +801,6 @@ protected:
   MooseObjectTagWarehouse<KernelBase> _ad_jacobian_kernels;
   MooseObjectTagWarehouse<ScalarKernel> _scalar_kernels;
   MooseObjectTagWarehouse<DGKernelBase> _dg_kernels;
-  MooseObjectTagWarehouse<FVFluxKernel> _fv_kernels;
   MooseObjectTagWarehouse<InterfaceKernelBase> _interface_kernels;
 
   ///@}

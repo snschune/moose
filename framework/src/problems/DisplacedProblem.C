@@ -568,13 +568,6 @@ DisplacedProblem::reinitElem(const Elem * elem, THREAD_ID tid)
 }
 
 void
-DisplacedProblem::reinitFVFace(const FaceInfo & fi, THREAD_ID tid)
-{
-  _displaced_nl.reinitFVFace(fi, tid);
-  _displaced_aux.reinitFVFace(fi, tid);
-}
-
-void
 DisplacedProblem::reinitElemPhys(const Elem * elem,
                                  const std::vector<Point> & phys_points_in_elem,
                                  THREAD_ID tid,

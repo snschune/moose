@@ -318,19 +318,6 @@ SystemBase::prepareLowerD(THREAD_ID tid)
 }
 
 void
-SystemBase::reinitFVFace(const FaceInfo & fi, THREAD_ID tid)
-{
-  if (_subproblem.hasActiveMooseVariablesFV(tid))
-  {
-    const std::set<MooseVariableFVBase *> & active_elemental_moose_variables =
-        _subproblem.getActiveMooseVariablesFV(tid);
-    for (const auto & var : active_elemental_moose_variables)
-      if (&(var->sys()) == this)
-        var->computeFaceValues(fi);
-  }
-}
-
-void
 SystemBase::reinitElem(const Elem * /*elem*/, THREAD_ID tid)
 {
 

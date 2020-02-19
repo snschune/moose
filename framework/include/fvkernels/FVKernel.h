@@ -7,16 +7,23 @@
 #include "NeighborCoupleable.h"
 #include "TwoMaterialPropertyInterface.h"
 #include "NeighborMooseVariableInterface.h"
-#include "NeighborCoupleableMooseVariableDependencyIntermediateInterface.h"
+#include "MooseVariableDependencyInterface.h"
 
 class FaceInfo;
 
-class FVFluxKernel : public MooseObject,
-                     public TaggingInterface,
-                     public TransientInterface,
-                     public BlockRestrictable,
+class FVKernel : public MooseObject,
+                 public TaggingInterface,
+                 public TransientInterface,
+                 public BlockRestrictable,
+                 public MooseVariableDependencyInterface
+{
+public:
+  FVKernel(const InputParameters & params);
+};
+
+class FVFluxKernel : public FVKernel,
                      public TwoMaterialPropertyInterface,
-                     public NeighborCoupleableMooseVariableDependencyIntermediateInterface,
+                     public NeighborCoupleable,
                      public NeighborMooseVariableInterface<Real>
 {
 public:

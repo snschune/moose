@@ -270,6 +270,7 @@ MooseVariableFV<OutputType>::computeFaceValues(const FaceInfo & fi)
 {
   _element_data->setGeometry(Moose::Face);
   _element_data->computeValuesFace(fi);
+  _neighbor_data->setGeometry(Moose::Face);
   _neighbor_data->computeValuesFace(fi);
 }
 

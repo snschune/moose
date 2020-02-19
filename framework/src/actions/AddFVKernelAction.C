@@ -30,11 +30,11 @@ AddFVKernelAction::act()
   {
     if (Registry::isADObj(_type + "<RESIDUAL>"))
     {
-      _problem->addFVFluxKernel(_type + "<RESIDUAL>", _name + "_residual", _moose_object_pars);
-      _problem->addFVFluxKernel(_type + "<JACOBIAN>", _name + "_jacobian", _moose_object_pars);
+      _problem->addFVKernel(_type + "<RESIDUAL>", _name + "_residual", _moose_object_pars);
+      _problem->addFVKernel(_type + "<JACOBIAN>", _name + "_jacobian", _moose_object_pars);
       _problem->haveADObjects(true);
     }
     else
-      _problem->addFVFluxKernel(_type, _name, _moose_object_pars);
+      _problem->addFVKernel(_type, _name, _moose_object_pars);
   }
 }

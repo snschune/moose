@@ -26,6 +26,7 @@ enum class Interfaces
   Postprocessor = 1 << 10,
   VectorPostprocessor = 1 << 11,
   InterfaceUserObject = 1 << 12,
+  FVFluxKernel = 1 << 13,
 };
 
 template <>

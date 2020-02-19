@@ -90,6 +90,7 @@
 #include "TimedPrint.h"
 #include "MaxVarNDofsPerElem.h"
 #include "MaxVarNDofsPerNode.h"
+#include "FVKernel.h"
 
 #include "libmesh/exodusII_io.h"
 #include "libmesh/quadrature.h"
@@ -1619,18 +1620,6 @@ FEProblemBase::reinitDirac(const Elem * elem, THREAD_ID tid)
 }
 
 void
-FEProblemBase::reinitFVFace(const FaceInfo & fi, THREAD_ID tid)
-{
-  _nl->reinitFVFace(fi, tid);
-  _aux->reinitFVFace(fi, tid);
-
-  // TODO: How to we match up with a corresponding FaceInfo object in the
-  // displaced mesh?
-  // if (_displaced_problem && _reinit_displaced_fv_face)
-  //  _displaced_problem->reinitFVFace(_displaced_mesh->equivalentFace(fi), tid);
-}
-
-void
 FEProblemBase::reinitElem(const Elem * elem, THREAD_ID tid)
 {
   _nl->reinitElem(elem, tid);
@@ -2548,7 +2537,7 @@ FEProblemBase::addDGKernel(const std::string & dg_kernel_name,
 }
 
 void
-FEProblemBase::addFVFluxKernel(const std::string & fv_kernel_name,
+FEProblemBase::addFVKernel(const std::string & fv_kernel_name,
                            const std::string & name,
                            InputParameters & parameters)
 {
@@ -2559,13 +2548,10 @@ FEProblemBase::addFVFluxKernel(const std::string & fv_kernel_name,
   }
   else
   {
+
+    // TODO: this if clause was copied from DG Kernels - do we really need it for FV?
     if (_displaced_problem == nullptr && parameters.get<bool>("use_displaced_mesh"))
     {
-      // TODO: this was copied from DG Kernels - do we really need it for FV?
-      // We allow FVKernels to request that they use_displaced_mesh,
-      // but then be overridden when no displacements variables are
-      // provided in the Mesh block.  If that happened, update the value
-      // of use_displaced_mesh appropriately for this DGKernel.
       if (parameters.have_parameter<bool>("use_displaced_mesh"))
         parameters.set<bool>("use_displaced_mesh") = false;
     }
@@ -2574,7 +2560,11 @@ FEProblemBase::addFVFluxKernel(const std::string & fv_kernel_name,
     parameters.set<SystemBase *>("_sys") = _nl.get();
   }
 
-  _nl->addFVFluxKernel(fv_kernel_name, name, parameters);
+  for (THREAD_ID tid = 0; tid < libMesh::n_threads(); ++tid)
+  {
+    std::shared_ptr<FVKernel> k = _factory.create<FVKernel>(fv_kernel_name, name, parameters, tid);
+    theWarehouse().add(k, "FVKernels");
+  }
 }
 
 // InterfaceKernels ////
