@@ -40,6 +40,8 @@ public:
 
   virtual void operator()(const RangeType & range, bool bypass_threading = false);
 
+  void join(const ComputeFVFaceResidualsThread & /*y*/){};
+
   /**
    * Called before the element range loop
    */
@@ -164,7 +166,7 @@ ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, boo
       for (faceinfo = range.begin(); faceinfo != range.end(); ++faceinfo)
       {
         const Elem & elem = faceinfo->leftElem();
-        unsigned int side = faceinfo->leftSide();
+        unsigned int side = faceinfo->leftSideID();
 
         _old_subdomain = _subdomain;
         _subdomain = elem.subdomain_id();

@@ -11,6 +11,11 @@
 
 class FaceInfo;
 
+// TODO: implement this eventually
+class FVBoundaryCondition
+{
+};
+
 class FVKernel : public MooseObject,
                  public TaggingInterface,
                  public TransientInterface,
