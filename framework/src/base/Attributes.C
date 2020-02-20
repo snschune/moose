@@ -31,12 +31,14 @@ bool
 AttribTagBase::isMatch(const Attribute & other) const
 {
   auto a = dynamic_cast<const AttribTagBase *>(&other);
-  if (!a || a->_vals.size() < 1)
+  if (!a)
     return false;
+  if (a->_vals.size() == 0)
+    return true; // the condition is empty tags - which we take to mean any tag should match
 
-  auto cond = a->_vals[0];
+  // return true if a single tag matches between the two attribute objects
   for (auto val : _vals)
-    if (val == cond)
+    if (std::find(a->_vals.begin(), a->_vals.end(), val) != a->_vals.end())
       return true;
   return false;
 }

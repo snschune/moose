@@ -32,7 +32,7 @@ template <typename RangeType>
 class ComputeFVFaceResidualsThread
 {
 public:
-  ComputeFVFaceResidualsThread(FEProblemBase & fe_problem);
+  ComputeFVFaceResidualsThread(FEProblemBase & fe_problem, const std::set<TagID> & tags);
 
   ComputeFVFaceResidualsThread(ComputeFVFaceResidualsThread & x, Threads::split split);
 
@@ -88,9 +88,10 @@ public:
    */
   virtual void caughtMooseException(MooseException &){};
 
-protected:
+private:
   FEProblemBase & _fe_problem;
   MooseMesh & _mesh;
+  const std::set<TagID> & _tags;
   THREAD_ID _tid;
 
   /// The subdomain for the current element
@@ -105,22 +106,22 @@ protected:
   /// The subdomain for the last neighbor
   SubdomainID _old_neighbor_subdomain;
 
-private:
   void reinitVariables(const FaceInfo & fi);
 
   std::set<MooseVariableFVBase *> _needed_moose_vars;
 };
 
 template <typename RangeType>
-ComputeFVFaceResidualsThread<RangeType>::ComputeFVFaceResidualsThread(FEProblemBase & fe_problem)
-  : _fe_problem(fe_problem), _mesh(fe_problem.mesh())
+ComputeFVFaceResidualsThread<RangeType>::ComputeFVFaceResidualsThread(FEProblemBase & fe_problem,
+                                                                      const std::set<TagID> & tags)
+  : _fe_problem(fe_problem), _mesh(fe_problem.mesh()), _tags(tags)
 {
 }
 
 template <typename RangeType>
 ComputeFVFaceResidualsThread<RangeType>::ComputeFVFaceResidualsThread(
     ComputeFVFaceResidualsThread & x, Threads::split /*split*/)
-  : _fe_problem(x._fe_problem), _mesh(x._mesh)
+  : _fe_problem(x._fe_problem), _mesh(x._mesh), _tags(x._tags)
 {
 }
 
@@ -138,6 +139,15 @@ template <typename RangeType>
 void
 ComputeFVFaceResidualsThread<RangeType>::operator()(const RangeType & range, bool bypass_threading)
 {
+  // skip everything if we don't have any FV kernels.
+  std::vector<FVFluxKernel *> kernels;
+  _fe_problem.theWarehouse()
+      .query()
+      .template condition<AttribSystem>("FVFluxKernels")
+      .queryInto(kernels);
+  if (kernels.size() == 0)
+    return;
+
   try
   {
     try
@@ -222,8 +232,11 @@ ComputeFVFaceResidualsThread<RangeType>::onFace(const FaceInfo & fi)
   std::vector<FVFluxKernel *> kernels;
   _fe_problem.theWarehouse()
       .query()
-      .template condition<AttribSystem>("FVFluxKernels")
+      .template condition<AttribSystem>("FVKernels")
+      .template condition<AttribInterfaces>(Interfaces::FVFluxKernel)
       .template condition<AttribSubdomains>(_subdomain)
+      .template condition<AttribVectorTags>(_tags)
+      .template condition<AttribThread>(_tid)
       .queryInto(kernels);
   if (kernels.size() == 0)
     return;
@@ -254,6 +267,7 @@ ComputeFVFaceResidualsThread<RangeType>::onBoundary(const FaceInfo & fi, Boundar
       .template condition<AttribSystem>("FVBC")
       .template condition<AttribBoundaries>(bnd_id)
       .template condition<AttribThread>(_tid)
+      .template condition<AttribVectorTags>(_tags)
       .queryInto(bcs);
   if (bcs.size() == 0)
     return;
@@ -286,6 +300,7 @@ ComputeFVFaceResidualsThread<RangeType>::subdomainChanged()
       .template condition<AttribSubdomains>(_subdomain)
       .template condition<AttribInterfaces>(Interfaces::FVFluxKernel)
       .template condition<AttribThread>(_tid)
+      .template condition<AttribVectorTags>(_tags)
       .queryInto(kernels);
 
   for (auto k : kernels)
