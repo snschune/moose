@@ -192,7 +192,7 @@ public:
 
   ///////////////////////////// dof indices ///////////////////////////////////////////////
 
-  virtual void getDofIndices(const Elem * elem, std::vector<dof_id_type> & dof_indices) const;
+  void getDofIndices(const Elem * elem, std::vector<dof_id_type> & dof_indices) const;
   const std::vector<dof_id_type> & dofIndices() const { return _dof_indices; }
   unsigned int numberOfDofs() const { return _dof_indices.size(); }
   void clearDofIndices() { _dof_indices.clear(); }

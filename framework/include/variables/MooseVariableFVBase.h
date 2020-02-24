@@ -20,6 +20,7 @@ class NumericVector;
 class FaceInfo;
 
 class MooseVariableFVBase;
+
 template <>
 InputParameters validParams<MooseVariableFVBase>();
 
@@ -93,6 +94,39 @@ public:
   virtual size_t phiLowerSize() const override final
   {
     mooseError("phiLowerSize not supported by MooseVariableFVBase");
+  }
+
+  virtual void computeElemValuesFace() override final
+  {
+    mooseError("computeElemValuesFace not supported by MooseVariableFVBase");
+  }
+  virtual void computeNeighborValuesFace() override final
+  {
+    mooseError("computeNeighborValuesFace not supported by MooseVariableFVBase");
+  }
+  virtual void computeNeighborValues() override final
+  {
+    mooseError("computeNeighborValues not supported by MooseVariableFVBase");
+  }
+  virtual void computeLowerDValues() override final
+  {
+    mooseError("computeLowerDValues not supported by MooseVariableFVBase");
+  }
+  virtual void computeNodalNeighborValues() override final
+  {
+    mooseError("computeNodalNeighborValues not supported by MooseVariableFVBase");
+  }
+  virtual void computeNodalValues() override final
+  {
+    mooseError("computeNodalValues not supported by MooseVariableFVBase");
+  }
+  virtual const std::vector<dof_id_type> & dofIndicesLower() const override final
+  {
+    mooseError("dofIndicesLower not supported by MooseVariableFVBase");
+  }
+  virtual unsigned int numberOfDofsNeighbor() override final
+  {
+    mooseError("numberOfDofsNeighbor not supported by MooseVariableFVBase");
   }
 
   virtual bool isNodal() const override final { return false; }

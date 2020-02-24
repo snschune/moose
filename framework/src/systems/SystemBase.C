@@ -1184,7 +1184,7 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
     // now make sure this is a standard variable [not array/vector]
     if (getVariable(0, v).fieldType() != 0)
       mooseError("Variable ", v, " not a standard field variable [either VECTOR or ARRAY].");
-    moose_vars.push_back(&getFieldVariable<Real>(0, v));
+    moose_vars.push_back(&getVariable(0, v));
   }
 
   // loop over all faces
