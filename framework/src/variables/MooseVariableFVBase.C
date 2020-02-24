@@ -18,6 +18,6 @@ MooseVariableFVBase::validParams()
 }
 
 MooseVariableFVBase::MooseVariableFVBase(const InputParameters & parameters)
-  : MooseVariableBase(parameters)
+  : MooseVariableFEBase(parameters)
 {
 }

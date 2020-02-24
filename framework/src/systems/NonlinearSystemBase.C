@@ -1385,9 +1385,9 @@ NonlinearSystemBase::computeResidualInternal(const std::set<TagID> & tags)
     ComputeResidualThread cr(_fe_problem, tags);
     Threads::parallel_reduce(elem_range, cr);
 
-    ComputeFVFaceResidualsThread<std::vector<FaceInfo>> fvr(_fe_problem, tags);
-    StoredRange<std::vector<FaceInfo>::const_iterator, FaceInfo> faces(
-        &_fe_problem.mesh().faceInfo());
+    using FVRange = StoredRange<std::vector<FaceInfo>::const_iterator, FaceInfo>;
+    ComputeFVFaceResidualsThread<FVRange> fvr(_fe_problem, tags);
+    FVRange faces(&_fe_problem.mesh().faceInfo());
     Threads::parallel_reduce(faces, fvr);
 
     unsigned int n_threads = libMesh::n_threads();

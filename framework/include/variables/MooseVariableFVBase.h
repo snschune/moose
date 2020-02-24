@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "MooseVariableBase.h"
+#include "MooseVariableFEBase.h"
 
 namespace libMesh
 {
@@ -23,47 +23,87 @@ class MooseVariableFVBase;
 template <>
 InputParameters validParams<MooseVariableFVBase>();
 
-class MooseVariableFVBase : public MooseVariableBase
+class MooseVariableFVBase : public MooseVariableFEBase
 {
 public:
   static InputParameters validParams();
 
   MooseVariableFVBase(const InputParameters & parameters);
 
-  /// Clear out the dof indices.  We do this in case this variable is not going to be prepared.
-  virtual void clearDofIndices() = 0;
+  virtual void prepare() override final
+  {
+    mooseError("prepare not supported by MooseVariableFVBase");
+  }
+  virtual void prepareNeighbor() override final
+  {
+    mooseError("prepareNeighbor not supported by MooseVariableFVBase");
+  }
+  virtual void prepareAux() override final
+  {
+    mooseError("prepareAux not supported by MooseVariableFVBase");
+  }
+  virtual void reinitNode() override final
+  {
+    mooseError("reinitNode not supported by MooseVariableFVBase");
+  }
+  virtual void reinitNodes(const std::vector<dof_id_type> & /*nodes*/) override final
+  {
+    mooseError("reinitNodes not supported by MooseVariableFVBase");
+  }
+  virtual void reinitNodesNeighbor(const std::vector<dof_id_type> & /*nodes*/) override final
+  {
+    mooseError("reinitNodesNeighbor not supported by MooseVariableFVBase");
+  }
+  virtual void reinitAux() override final
+  {
+    mooseError("reinitAux not supported by MooseVariableFVBase");
+  }
+  virtual void reinitAuxNeighbor() override final
+  {
+    mooseError("reinitAuxNeighbor not supported by MooseVariableFVBase");
+  }
+  virtual void prepareLowerD() override final
+  {
+    mooseError("prepareLowerD not supported by MooseVariableFVBase");
+  }
+  virtual const dof_id_type & nodalDofIndex() const override final
+  {
+    mooseError("nodalDofIndex not supported by MooseVariableFVBase");
+  }
+  virtual const dof_id_type & nodalDofIndexNeighbor() const override final
+  {
+    mooseError("nodalDofIndexNeighbor not supported by MooseVariableFVBase");
+  }
+  virtual size_t phiSize() const override final
+  {
+    mooseError("phiSize not supported by MooseVariableFVBase");
+  }
+  virtual size_t phiFaceSize() const override final
+  {
+    mooseError("phiFaceSize not supported by MooseVariableFVBase");
+  }
+  virtual size_t phiNeighborSize() const override final
+  {
+    mooseError("phiNeighborSize not supported by MooseVariableFVBase");
+  }
+  virtual size_t phiFaceNeighborSize() const override final
+  {
+    mooseError("phiFaceNeighborSize not supported by MooseVariableFVBase");
+  }
+  virtual size_t phiLowerSize() const override final
+  {
+    mooseError("phiLowerSize not supported by MooseVariableFVBase");
+  }
 
-  /// Prepare the initial condition
-  virtual void prepareIC() = 0;
+  virtual bool isNodal() const override final { return false; }
 
-  /// Filed type of this variable
-  virtual Moose::VarFieldType fieldType() const = 0;
+  virtual bool isNodalDefined() const override final { return false; }
 
-  /// returns true if this is a vector-valued element, false otherwise.
-  virtual bool isVector() const = 0;
-
-  virtual bool isNodal() const override { return false; }
-
-  /// Current element this variable is being evaluated at in a volumetric/elemental
-  /// or face/flux loop.
-  virtual const Elem * const & currentElem() const = 0;
   /// Current neighbor element this variable is being evaluated at in a
   /// face/flux loop - this is nullptr for an elemental loop.
   virtual const Elem * const & currentNeighbor() const = 0;
 
-  /// The subdomains the variable is active on
-  virtual const std::set<SubdomainID> & activeSubdomains() const = 0;
-  /// returns true if the variable is active on the given subdomain
-  virtual bool activeOnSubdomain(SubdomainID subdomain) const = 0;
-
-  /// Compute values at interior quadrature points
-  virtual void computeElemValues() = 0;
   /// Compute values at face quadrature points for the element+neighbor (both
   /// sides of the face).
   virtual void computeFaceValues(const FaceInfo & fi) = 0;
-
-  virtual const std::vector<dof_id_type> & dofIndicesNeighbor() const = 0;
-
-  virtual void insert(NumericVector<Number> & residual) = 0;
-  virtual void add(NumericVector<Number> & residual) = 0;
 };
