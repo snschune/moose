@@ -1037,16 +1037,16 @@ MooseApp::run()
 {
   TIME_SECTION(_run_timer);
 
-  try
-  {
-    TIME_SECTION(_setup_timer);
-    setupOptions();
-    runInputFile();
-  }
-  catch (std::exception & err)
-  {
-    mooseError(err.what());
-  }
+  // try
+  //{
+  //  TIME_SECTION(_setup_timer);
+  setupOptions();
+  runInputFile();
+  //}
+  // catch (std::exception & err)
+  //{
+  //  mooseError(err.what());
+  //}
 
   if (!_check_input)
   {

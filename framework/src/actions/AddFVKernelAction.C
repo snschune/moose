@@ -11,7 +11,7 @@
 #include "FEProblem.h"
 #include "NonlinearSystem.h"
 
-registerMooseAction("MooseApp", AddFVKernelAction, "add_dg_kernel");
+registerMooseAction("MooseApp", AddFVKernelAction, "add_fv_kernel");
 
 defineLegacyParams(AddFVKernelAction);
 

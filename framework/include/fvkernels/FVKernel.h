@@ -7,7 +7,7 @@
 #include "NeighborCoupleable.h"
 #include "TwoMaterialPropertyInterface.h"
 #include "NeighborMooseVariableInterface.h"
-#include "MooseVariableDependencyInterface.h"
+#include "NeighborCoupleableMooseVariableDependencyIntermediateInterface.h"
 
 class FaceInfo;
 
@@ -19,19 +19,20 @@ class FVBoundaryCondition
 class FVKernel : public MooseObject,
                  public TaggingInterface,
                  public TransientInterface,
-                 public BlockRestrictable,
-                 public MooseVariableDependencyInterface
+                 public BlockRestrictable
 {
 public:
+  static InputParameters validParams();
   FVKernel(const InputParameters & params);
 };
 
 class FVFluxKernel : public FVKernel,
                      public TwoMaterialPropertyInterface,
-                     public NeighborCoupleable,
-                     public NeighborMooseVariableInterface<Real>
+                     public NeighborMooseVariableInterface<Real>,
+                     public NeighborCoupleableMooseVariableDependencyIntermediateInterface
 {
 public:
+  static InputParameters validParams();
   FVFluxKernel(const InputParameters & params);
 
   virtual void computeResidual(const FaceInfo & fi);
@@ -43,17 +44,18 @@ protected:
   // extrapolated to/at the face.  Material properties will also have been
   // computed on the face using the face-reconstructed variable values.
   //
-  virtual Real computeQpResidual(const FaceInfo & fi) = 0;
+  virtual Real computeQpResidual() = 0;
 
-  MooseVariable & _var;
+  MooseVariableFV<Real> & _var;
   THREAD_ID _tid;
   Assembly & _assembly;
 
+  const unsigned int _qp = 0;
   const VariableValue & _u_left;
   const VariableValue & _u_right;
   const VariableGradient & _grad_u_left;
   const VariableGradient & _grad_u_right;
-  const MooseArray<Point> & _normal;
+  Point _normal;
 
   const FaceInfo * _face_info = nullptr;
 
