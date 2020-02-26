@@ -19,7 +19,7 @@
 #include "ThreadedElementLoop.h"
 #include "MaterialData.h"
 #include "ComputeResidualThread.h"
-#include "ComputeFVFaceResidualsThread.h"
+#include "ComputeFVFluxThread.h"
 #include "ComputeJacobianThread.h"
 #include "ComputeJacobianForScalingThread.h"
 #include "ComputeFullJacobianThread.h"
@@ -1386,7 +1386,7 @@ NonlinearSystemBase::computeResidualInternal(const std::set<TagID> & tags)
     Threads::parallel_reduce(elem_range, cr);
 
     using FVRange = StoredRange<std::vector<FaceInfo>::const_iterator, FaceInfo>;
-    ComputeFVFaceResidualsThread<FVRange> fvr(_fe_problem, tags);
+    ComputeFVFluxThread<FVRange> fvr(_fe_problem, tags);
     FVRange faces(&_fe_problem.mesh().faceInfo());
     Threads::parallel_reduce(faces, fvr);
 

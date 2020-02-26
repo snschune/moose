@@ -3,7 +3,7 @@
 #include "Assembly.h"
 #include "MooseVariableFV.h"
 
-#include "ComputeFVFaceResidualsThread.h"
+#include "ComputeFVFluxThread.h"
 
 InputParameters
 FVKernel::validParams()
