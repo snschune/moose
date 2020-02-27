@@ -133,7 +133,7 @@ ThreadedFaceLoop<RangeType>::operator()(const RangeType & range, bool bypass_thr
   // fv source kernels into this loop. Also this check will need to increase
   // in generality if/when other systems and objects besides FV stuff get
   // added to this loop.
-  std::vector<FVFluxKernel *> kernels;
+  std::vector<FVKernel *> kernels;
   _fe_problem.theWarehouse()
       .query()
       .template condition<AttribSystem>("FVKernels")
@@ -252,7 +252,7 @@ ComputeFVFluxThread<RangeType>::reinitVariables(const FaceInfo & fi)
   // be some stuff that happens in assembly::reinit/reinitFE that we need, but
   // most of that is (obviously) FE specific.  Also - we need to fall back to
   // reiniting everything like normal if there is any FV-FE variable coupling.
-  _fe_problem.prepare(fi.leftElem(), _tid);
+  _fe_problem.prepare(&fi.leftElem(), _tid);
 
   // TODO: for FE variables, this is handled via setting needed vars through
   // fe problem API which passes the value on to the system class.  Then
@@ -292,15 +292,16 @@ template <typename RangeType>
 void
 ComputeFVFluxThread<RangeType>::onFace(const FaceInfo & fi)
 {
-  std::vector<FVFluxKernel *> kernels;
+  std::vector<FVFluxKernelBase *> kernels;
   _fe_problem.theWarehouse()
       .query()
-      .template condition<AttribSystem>("FVKernels")
       .template condition<AttribInterfaces>(Interfaces::FVFluxKernel)
       .template condition<AttribSubdomains>(_subdomain)
       .template condition<AttribVectorTags>(_tags)
       .template condition<AttribThread>(_tid)
+      .template condition<AttribSystem>("FVKernels")
       .queryInto(kernels);
+
   if (kernels.size() == 0)
     return;
 
@@ -361,7 +362,7 @@ ComputeFVFluxThread<RangeType>::subdomainChanged()
   // kernels, etc. - but we don't need to add them for other types of objects
   // like FE or DG kernels because those kernels don't run in this loop. Do we
   // really want to integrate fv source kernels into this loop?
-  std::vector<FVFluxKernel *> kernels;
+  std::vector<FVFluxKernelBase *> kernels;
   _fe_problem.theWarehouse()
       .query()
       .template condition<AttribSystem>("FVKernels")
