@@ -85,6 +85,7 @@ FVFluxKernel<compute_stage>::FVFluxKernel(const InputParameters & params)
     _grad_u_left(_var.gradSln()),
     _grad_u_right(_var.gradSlnNeighbor())
 {
+  addMooseVariableDependency(&_var);
 }
 
 template <ComputeStage compute_stage>
@@ -131,23 +132,19 @@ FVFluxKernel<compute_stage>::computeJacobian(const FaceInfo & fi)
   unsigned int nvars = sys.system().n_vars();
 
   prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::ElementElement);
-  ad_offset = _var.number() * dofs_per_elem;
   _local_ke(0, 0) += r.derivatives()[var_num * dofs_per_elem];
   accumulateTaggedLocalMatrix();
 
   prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::ElementNeighbor);
-  ad_offset = _var.number() * dofs_per_elem + (nvars * dofs_per_elem);
-  _local_ke(0, 1) += r.derivatives()[var_num * dofs_per_elem + 1];
+  _local_ke(0, 0) += r.derivatives()[var_num * dofs_per_elem + nvars * dofs_per_elem];
   accumulateTaggedLocalMatrix();
 
   prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::NeighborElement);
-  ad_offset = var_num * dofs_per_elem;
-  _local_ke(1, 0) += r_neighbor.derivatives()[var_num * dofs_per_elem];
+  _local_ke(0, 0) += r_neighbor.derivatives()[var_num * dofs_per_elem];
   accumulateTaggedLocalMatrix();
 
   prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::NeighborNeighbor);
-  ad_offset = var_num * dofs_per_elem + (nvars * dofs_per_elem);
-  _local_ke(1, 1) += r_neighbor.derivatives()[var_num * dofs_per_elem + 1];
+  _local_ke(0, 0) += r_neighbor.derivatives()[var_num * dofs_per_elem + nvars * dofs_per_elem];
   accumulateTaggedLocalMatrix();
 }
 

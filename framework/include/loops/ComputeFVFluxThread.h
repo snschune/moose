@@ -254,6 +254,13 @@ ComputeFVFluxThread<RangeType>::reinitVariables(const FaceInfo & fi)
   // reiniting everything like normal if there is any FV-FE variable coupling.
   _fe_problem.prepare(&fi.leftElem(), _tid);
 
+  // TODO: this triggers a bunch of FE-specific stuff to occur that we might
+  // not need if only FV variables are active.  Some of the stuff triggered by
+  // this call, however is necessary - particularly for reiniting materials.
+  // Figure out a way to only do the minimum required here if we only have FV
+  // variables.
+  _fe_problem.reinitNeighbor(&fi.leftElem(), fi.leftSideID(), _tid);
+
   // TODO: for FE variables, this is handled via setting needed vars through
   // fe problem API which passes the value on to the system class.  Then
   // reinit is called on fe problem which forwards its calls to the system
@@ -266,17 +273,10 @@ ComputeFVFluxThread<RangeType>::reinitVariables(const FaceInfo & fi)
   // need to be able to reinit the subproblems variables using its equivalent
   // face info object.  How?
 
-  // TODO: this triggers a bunch of FE-specific stuff to occur that we might
-  // not need if only FV variables are active.  Some of the stuff triggered by
-  // this call, however is necessary - particularly for reiniting materials.
-  // Figure out a way to only do the minimum required here if we only have FV
-  // variables.
-  _fe_problem.reinitNeighbor(&fi.leftElem(), fi.leftSideID(), _tid);
-
   _fe_problem.reinitMaterialsFace(fi.leftElem().subdomain_id(), _tid);
   _fe_problem.reinitMaterialsNeighbor(fi.rightElem().subdomain_id(), _tid);
 
-  for (const auto & var : _needed_fv_vars)
+  for (auto var : _needed_fv_vars)
     var->computeFaceValues(fi);
 
   // this is the swap-back object - don't forget to catch it into local var
