@@ -84,10 +84,10 @@ protected:
   Assembly & _assembly;
 
   const unsigned int _qp = 0;
-  const VariableValue & _u_left;
-  const VariableValue & _u_right;
-  const VariableGradient & _grad_u_left;
-  const VariableGradient & _grad_u_right;
+  const ADVariableValue & _u_left;
+  const ADVariableValue & _u_right;
+  const ADVariableGradient & _grad_u_left;
+  const ADVariableGradient & _grad_u_right;
   Point _normal;
   const FaceInfo * _face_info = nullptr;
 

@@ -284,8 +284,7 @@ ComputeFVFluxThread<RangeType>::reinitVariables(const FaceInfo & fi)
     _fe_problem.swapBackMaterialsFace(_tid);
     _fe_problem.swapBackMaterialsNeighbor(_tid);
   };
-  OnScopeExit ose(fn);
-  return ose;
+  return OnScopeExit(fn);
 }
 
 template <typename RangeType>
@@ -293,14 +292,15 @@ void
 ComputeFVFluxThread<RangeType>::onFace(const FaceInfo & fi)
 {
   std::vector<FVFluxKernelBase *> kernels;
-  _fe_problem.theWarehouse()
-      .query()
-      .template condition<AttribInterfaces>(Interfaces::FVFluxKernel)
-      .template condition<AttribSubdomains>(_subdomain)
-      .template condition<AttribVectorTags>(_tags)
-      .template condition<AttribThread>(_tid)
-      .template condition<AttribSystem>("FVKernels")
-      .queryInto(kernels);
+  auto q = _fe_problem.theWarehouse()
+               .query()
+               .template condition<AttribInterfaces>(Interfaces::FVFluxKernel)
+               .template condition<AttribSubdomains>(_subdomain)
+               .template condition<AttribVectorTags>(_tags)
+               .template condition<AttribThread>(_tid)
+               .template condition<AttribSystem>("FVKernels")
+               .template condition<AttribIsAD>(_do_jacobian)
+               .queryInto(kernels);
 
   if (kernels.size() == 0)
     return;
@@ -319,9 +319,9 @@ ComputeFVFluxThread<RangeType>::onFace(const FaceInfo & fi)
 
   for (const auto k : kernels)
     if (_do_jacobian)
-      k->computeResidual(fi);
-    else
       k->computeJacobian(fi);
+    else
+      k->computeResidual(fi);
 }
 
 template <typename RangeType>

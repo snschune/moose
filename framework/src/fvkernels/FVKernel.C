@@ -80,10 +80,10 @@ FVFluxKernel<compute_stage>::FVFluxKernel(const InputParameters & params)
     _var(*mooseVariableFV()),
     _tid(params.get<THREAD_ID>("_tid")),
     _assembly(_subproblem.assembly(_tid)),
-    _u_left(_var.sln()),
-    _u_right(_var.slnNeighbor()),
-    _grad_u_left(_var.gradSln()),
-    _grad_u_right(_var.gradSlnNeighbor())
+    _u_left(_var.adSln<compute_stage>()),
+    _u_right(_var.adSlnNeighbor<compute_stage>()),
+    _grad_u_left(_var.adGradSln<compute_stage>()),
+    _grad_u_right(_var.adGradSlnNeighbor<compute_stage>())
 {
   addMooseVariableDependency(&_var);
 }
