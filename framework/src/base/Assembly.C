@@ -2719,7 +2719,11 @@ Assembly::jacobianBlockNeighbor(Moose::DGJacobianType type,
                                 unsigned int jvar,
                                 TagID tag)
 {
-  _jacobian_block_neighbor_used[tag][ivar][jvar] = 1;
+  if (type == Moose::ElementElement)
+    _jacobian_block_used[tag][ivar][jvar] = 1;
+  else
+    _jacobian_block_neighbor_used[tag][ivar][jvar] = 1;
+
   if (_block_diagonal_matrix)
   {
     switch (type)
