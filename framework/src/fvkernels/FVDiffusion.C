@@ -16,8 +16,7 @@ template <ComputeStage compute_stage>
 FVDiffusion<compute_stage>::FVDiffusion(const InputParameters & params)
   : FVFluxKernel<compute_stage>(params),
     _coeff_left(getADMaterialProperty<Real>("coeff")),
-    _coeff_right(getNeighborMaterialProperty<Real>(
-        "coeff")){}; // TODO: implement getADNeighborMaterialProperty
+    _coeff_right(getNeighborADMaterialProperty<Real>("coeff")){};
 
 template <ComputeStage compute_stage>
 ADReal
@@ -27,7 +26,7 @@ FVDiffusion<compute_stage>::computeQpResidual()
                 (_face_info->rightCentroid() - _face_info->leftCentroid()).norm();
   auto grad_u_interface = _normal * dudn;
   ADReal k = (_coeff_left[_qp] + _coeff_right[_qp]) / 2;
-  return _normal * k * grad_u_interface;
+  return _normal * -1 * k * grad_u_interface;
 }
 
 template <ComputeStage compute_stage>
