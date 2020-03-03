@@ -123,7 +123,7 @@ FVFluxKernel<compute_stage>::computeJacobian(const FaceInfo & fi)
   _face_info = &fi;
   _normal = fi.normal();
   DualReal r = fi.faceArea() * computeQpResidual();
-  DualReal r_neighbor = -1 * fi.faceArea() * computeQpResidual();
+  DualReal r_neighbor = -1 * r;
 
   unsigned int ad_offset = 0;
   auto & sys = _subproblem.systemBaseNonlinear();
@@ -131,21 +131,27 @@ FVFluxKernel<compute_stage>::computeJacobian(const FaceInfo & fi)
   unsigned int var_num = _var.number();
   unsigned int nvars = sys.system().n_vars();
 
-  prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::ElementElement);
-  _local_ke(0, 0) += r.derivatives()[var_num * dofs_per_elem];
-  accumulateTaggedLocalMatrix();
+  if (ownLeftElem())
+  {
+    prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::ElementElement);
+    _local_ke(0, 0) += r.derivatives()[var_num * dofs_per_elem];
+    accumulateTaggedLocalMatrix();
 
-  prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::ElementNeighbor);
-  _local_ke(0, 0) += r.derivatives()[var_num * dofs_per_elem + nvars * dofs_per_elem];
-  accumulateTaggedLocalMatrix();
+    prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::ElementNeighbor);
+    _local_ke(0, 0) += r.derivatives()[var_num * dofs_per_elem + nvars * dofs_per_elem];
+    accumulateTaggedLocalMatrix();
+  }
 
-  prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::NeighborElement);
-  _local_ke(0, 0) += r_neighbor.derivatives()[var_num * dofs_per_elem];
-  accumulateTaggedLocalMatrix();
+  if (ownRightElem())
+  {
+    prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::NeighborElement);
+    _local_ke(0, 0) += r_neighbor.derivatives()[var_num * dofs_per_elem];
+    accumulateTaggedLocalMatrix();
 
-  prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::NeighborNeighbor);
-  _local_ke(0, 0) += r_neighbor.derivatives()[var_num * dofs_per_elem + nvars * dofs_per_elem];
-  accumulateTaggedLocalMatrix();
+    prepareMatrixTagNeighbor(_assembly, var_num, var_num, Moose::NeighborNeighbor);
+    _local_ke(0, 0) += r_neighbor.derivatives()[var_num * dofs_per_elem + nvars * dofs_per_elem];
+    accumulateTaggedLocalMatrix();
+  }
 }
 
 adBaseClass(FVFluxKernel);

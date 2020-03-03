@@ -231,20 +231,20 @@ AttribThread::isEqual(const Attribute & other) const
 }
 
 void
-AttribIsAD::initFrom(const MooseObject * obj)
+AttribIsADJac::initFrom(const MooseObject * obj)
 {
   std::string suffix = "_jacobian";
   auto s = obj->name();
   _val = s.rfind(suffix) == (s.size() - suffix.size());
 }
 bool
-AttribIsAD::isMatch(const Attribute & other) const
+AttribIsADJac::isMatch(const Attribute & other) const
 {
-  auto a = dynamic_cast<const AttribIsAD *>(&other);
+  auto a = dynamic_cast<const AttribIsADJac *>(&other);
   return a && (a->_val == _val);
 }
 bool
-AttribIsAD::isEqual(const Attribute & other) const
+AttribIsADJac::isEqual(const Attribute & other) const
 {
   return isMatch(other);
 }

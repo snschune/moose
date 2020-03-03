@@ -162,15 +162,15 @@ private:
   THREAD_ID _val;
 };
 
-class AttribIsAD : public Attribute
+class AttribIsADJac : public Attribute
 {
 public:
-  AttribIsAD(TheWarehouse & w, bool is_ad) : Attribute(w, "is_ad"), _val(is_ad) {}
+  AttribIsADJac(TheWarehouse & w, bool is_ad) : Attribute(w, "is_ad_jac"), _val(is_ad) {}
   virtual void initFrom(const MooseObject * obj) override;
   virtual bool isMatch(const Attribute & other) const override;
   virtual bool isEqual(const Attribute & other) const override;
   hashfunc(_val);
-  clonefunc(AttribIsAD);
+  clonefunc(AttribIsADJac);
 
 private:
   bool _val;
