@@ -81,6 +81,8 @@ public:
   const Point & normal() const { return _normal; }
   ///@}
 
+  bool isBoundary() const { return (_right == nullptr); }
+
   ///@{ returns the face centroid
   const Point & faceCentroid() const { return _face_centroid; }
   ///@}
