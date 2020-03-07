@@ -44,7 +44,9 @@ TestFaceInfo::TestFaceInfo(const InputParameters & parameters)
     _left_cz(declareVector("left_cz")),
     _right_cx(declareVector("right_cx")),
     _right_cy(declareVector("right_cy")),
-    _right_cz(declareVector("right_cz"))
+    _right_cz(declareVector("right_cz")),
+    _left_n_boundary_side(declareVector("left_n_boundary_sides")),
+    _right_n_boundary_side(declareVector("right_n_boundary_sides"))
 {
   if (isParamValid("vars"))
   {
@@ -68,9 +70,12 @@ TestFaceInfo::execute()
     _face_id.push_back(j);
     _face_area.push_back(p.faceArea());
     _left_element_id.push_back(p.leftElem().id());
-    _right_element_id.push_back(p.rightElem().id());
     _left_element_side.push_back(p.leftSideID());
-    _right_element_side.push_back(p.rightSideID());
+    // the right element might be a nullptr
+    if (p.faceType() == FaceInfo::DOMAIN_BOUNDARY)
+      _right_element_id.push_back(Elem::invalid_id);
+    else
+      _right_element_id.push_back(p.rightElem().id());
 
     Point normal = p.normal();
     _nx.push_back(normal(0));
@@ -88,6 +93,9 @@ TestFaceInfo::execute()
     _right_cx.push_back(rc(0));
     _right_cy.push_back(rc(1));
     _right_cz.push_back(rc(2));
+
+    _left_n_boundary_side.push_back(p.leftBoundaryIDs().size());
+    _right_n_boundary_side.push_back(p.rightBoundaryIDs().size());
 
     for (unsigned int l = 0; l < _vars.size(); ++l)
     {

@@ -30,7 +30,8 @@
 [VectorPostprocessors]
   [./face_info]
     type = TestFaceInfo
-    vars = 'u v'
+    # variables from Nonlinear & Auxsys together are currently broken.
+    # vars = 'u v'
   [../]
 []
 

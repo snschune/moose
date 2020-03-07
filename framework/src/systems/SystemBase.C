@@ -1191,7 +1191,7 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
   for (auto & p : mesh().faceInfo())
   {
     const Elem & left_elem = p.leftElem();
-    const Elem & right_elem = p.rightElem();
+    const Elem * right_elem = p.rightElemPtr();
 
     // loop through vars
     for (unsigned int j = 0; j < moose_vars.size(); ++j)
@@ -1201,10 +1201,14 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
 
       std::vector<dof_id_type> left_dof_indices;
       var->getDofIndices(&left_elem, left_dof_indices);
-      std::vector<dof_id_type> right_dof_indices;
-      var->getDofIndices(&right_elem, right_dof_indices);
-
       p.leftDofIndices(var_num) = left_dof_indices;
+
+      std::vector<dof_id_type> right_dof_indices;
+      if (right_elem)
+        var->getDofIndices(right_elem, right_dof_indices);
+      else
+        right_dof_indices = {libMesh::DofObject::invalid_id};
+
       p.rightDofIndices(var_num) = right_dof_indices;
     }
   }

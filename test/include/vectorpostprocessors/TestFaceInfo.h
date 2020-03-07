@@ -49,6 +49,9 @@ protected:
   VectorPostprocessorValue & _right_cy;
   VectorPostprocessorValue & _right_cz;
 
+  VectorPostprocessorValue & _left_n_boundary_side;
+  VectorPostprocessorValue & _right_n_boundary_side;
+
   std::vector<VariableName> _vars;
   std::vector<VectorPostprocessorValue *> _var_left_dof;
   std::vector<VectorPostprocessorValue *> _var_right_dof;

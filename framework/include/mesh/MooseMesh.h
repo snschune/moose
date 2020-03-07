@@ -71,7 +71,15 @@ public:
 class FaceInfo
 {
 public:
-  FaceInfo(const Elem * elem, const Elem * neighbor);
+  FaceInfo(const Elem * elem, unsigned int side, const Elem * neighbor, const std::map<std::pair<const Elem *, unsigned short int>, std::set<boundary_id_type>> & side_map);
+
+  /// type of this face: internal to a block, between blocks, domain boundary
+  enum FACE_TYPE
+  {
+    BLOCK_INTERNAL = 0,
+    BETWEEN_BLOCK = 1,
+    DOMAIN_BOUNDARY = 2
+  };
 
   ///@{ returns the face area of face id
   Real faceArea() const { return _face_area; }
@@ -87,7 +95,14 @@ public:
 
   ///@{ returns the left and right adjacent elements
   const Elem & leftElem() const { return *_left; }
-  const Elem & rightElem() const { return *_right; }
+  const Elem * rightElemPtr() const { return _right; }
+  const Elem & rightElem() const
+  {
+    if (!_right)
+      mooseError("FaceInfo object 'const Elem & rightElem()' is called but right element pointer "
+                 "is null. This occurs for faces at the domain boundary");
+    return *_right;
+  }
   ///@}
 
   ///@{ returns the left and right centroids
@@ -121,6 +136,14 @@ public:
     return _right_dof_indices[var_number];
   }
 
+  ///@{ returns the left and right boundary ids attached to this face
+  const std::set<boundary_id_type> & leftBoundaryIDs() const { return _left_sideset_ids; }
+  const std::set<boundary_id_type> & rightBoundaryIDs() const { return _right_sideset_ids; }
+  ///@}
+
+  /// returns the face type
+  FACE_TYPE faceType() const { return _face_type; }
+
 private:
   Real _face_area;
   Real _left_volume;
@@ -139,9 +162,23 @@ private:
   Point _right_centroid;
   Point _face_centroid;
 
+  /// the face type of this face
+  FACE_TYPE _face_type;
+
   /// cached locations of variables in solution vectors
+  /// TODO: storing dofs by var# does not work because
+  /// var_nums are not unique across systems!
   std::vector<std::vector<dof_id_type>> _left_dof_indices;
   std::vector<std::vector<dof_id_type>> _right_dof_indices;
+
+  /**
+   * cached sideset ids associated with this face
+   * NOTE: boundaries/sidesets are associated with the left/right side
+   * of the face. The left, right, or both sides can be associated with
+   * zero, one, or more sidesets
+   */
+  std::set<boundary_id_type> _left_sideset_ids;
+  std::set<boundary_id_type> _right_sideset_ids;
 };
 
 /**

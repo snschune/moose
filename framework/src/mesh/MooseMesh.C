@@ -60,18 +60,55 @@
 static const int GRAIN_SIZE =
     1; // the grain_size does not have much influence on our execution speed
 
-FaceInfo::FaceInfo(const Elem * elem, const Elem * neighbor)
+FaceInfo::FaceInfo(const Elem * elem,
+                   unsigned int side,
+                   const Elem * neighbor,
+                   const std::map<std::pair<const Elem *, unsigned short int>,
+                                  std::set<boundary_id_type>> & side_map)
 {
   _left = elem;
   _right = neighbor;
 
-  _left_side_id = elem->which_neighbor_am_i(neighbor);
-  _right_side_id = neighbor->which_neighbor_am_i(elem);
+  _left_side_id = side;
   _left_centroid = elem->centroid();
-  _right_centroid = neighbor->centroid();
-
   _left_volume = elem->volume();
-  _right_volume = neighbor->volume();
+
+  // the right info does not exist for domain boundaries
+  if (!_right)
+  {
+    _right_side_id = std::numeric_limits<unsigned int>::max();
+    _right_centroid = Point(std::numeric_limits<Real>::max(),
+                            std::numeric_limits<Real>::max(),
+                            std::numeric_limits<Real>::max());
+    _right_volume = 0;
+    _face_type = DOMAIN_BOUNDARY;
+  }
+  else
+  {
+    _right_side_id = neighbor->which_neighbor_am_i(elem);
+    _right_centroid = neighbor->centroid();
+    _right_volume = neighbor->volume();
+
+    // set domain type
+    if (_left->subdomain_id() == _left->subdomain_id())
+      _face_type = BLOCK_INTERNAL;
+    else
+      _face_type = BETWEEN_BLOCK;
+  }
+
+  // store boundary information
+  std::pair<const Elem *, unsigned short int> key(elem, side);
+  auto it = side_map.find(key);
+  if (it != side_map.end())
+    _left_sideset_ids = it->second;
+
+  if (_right)
+  {
+    key = std::make_pair(_right, _right_side_id);
+    it = side_map.find(key);
+    if (it != side_map.end())
+      _right_sideset_ids = it->second;
+  }
 
   std::unique_ptr<const Elem> face = elem->build_side_ptr(_left_side_id);
   _face_area = face->volume();
@@ -2879,6 +2916,21 @@ MooseMesh::buildFaceInfo()
   // clear data structures
   _face_info.clear();
 
+  // get sidelist
+  std::vector<std::tuple<dof_id_type, unsigned short int, boundary_id_type>> side_list =
+      buildSideList();
+  std::map<std::pair<const Elem *, unsigned short int>, std::set<boundary_id_type>> side_map;
+  for (auto & e : side_list)
+  {
+    const Elem * elem = getMesh().elem_ptr(std::get<0>(e));
+    std::pair<const Elem *, unsigned short int> key(elem, std::get<1>(e));
+    auto it = side_map.find(key);
+    if (it == side_map.end())
+      side_map[key] = {std::get<2>(e)};
+    else
+      side_map[key].insert(std::get<2>(e));
+  }
+
   // loop over all active, local elements
   auto begin = getMesh().active_local_elements_begin();
   auto end = getMesh().active_local_elements_end();
@@ -2891,15 +2943,11 @@ MooseMesh::buildFaceInfo()
       // get the neighbor element
       const Elem * neighbor = elem->neighbor_ptr(side);
 
-      // this is a boundary side
-      if (!neighbor)
-        continue;
-
-      if ((neighbor->active() && (neighbor->level() == elem->level()) &&
+      if (!neighbor ||
+          (neighbor->active() && (neighbor->level() == elem->level()) &&
            (elem_id < neighbor->id())) ||
           (neighbor->level() < elem->level()))
-        _face_info.emplace_back(elem, neighbor);
+        _face_info.emplace_back(elem, side, neighbor, side_map);
     }
   }
 }
-
