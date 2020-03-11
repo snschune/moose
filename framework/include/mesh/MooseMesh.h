@@ -71,7 +71,35 @@ public:
 class FaceInfo
 {
 public:
-  FaceInfo(const Elem * elem, const Elem * neighbor);
+  FaceInfo(const Elem * elem, unsigned int side, const Elem * neighbor);
+
+  /**
+   * type of this face for each variables
+   * each variable potentially has its own domain and boundary
+   * INTERNAL: internal to the domain of the variable
+   * INVALID: variable is not defined on either subdomains (left/right)
+   * LEFT_DIRICHLET: face defines a Dirichlet BC for this variable and variable
+   *                 is defined on the left element
+   * RIGHT_DIRICHLET: face defines a Dirichlet BC for this variable and variable
+   *                  is defined on the right element
+   * LEFT_INTEGRATED: face defines an Integrated BC for this variable and variable
+   *                 is defined on the left element
+   * RIGHT_INTEGRATED: face defines an Integrated BC for this variable and variable
+   *                  is defined on the right element
+   * NATURAL_BOUNDARY: face is a boundary for this variable but no boundary conditions
+   *                   is defined
+   *
+   */
+  enum FACE_TYPE
+  {
+    INTERNAL = 0,
+    INVALID = 1,
+    LEFT_DIRICHLET = 2,
+    RIGHT_DIRICHLET = 3,
+    LEFT_INTEGRATED = 4,
+    RIGHT_INTEGRATED = 5,
+    NATURAL_BOUNDARY = 6
+  };
 
   ///@{ returns the face area of face id
   Real faceArea() const { return _face_area; }
@@ -89,7 +117,14 @@ public:
 
   ///@{ returns the left and right adjacent elements
   const Elem & leftElem() const { return *_left; }
-  const Elem & rightElem() const { return *_right; }
+  const Elem * rightElemPtr() const { return _right; }
+  const Elem & rightElem() const
+  {
+    if (!_right)
+      mooseError("FaceInfo object 'const Elem & rightElem()' is called but right element pointer "
+                 "is null. This occurs for faces at the domain boundary");
+    return *_right;
+  }
   ///@}
 
   ///@{ returns the left and right centroids
@@ -102,25 +137,38 @@ public:
   unsigned int rightSideID() const { return _right_side_id; }
   ///@}
 
-  const std::vector<dof_id_type> & leftDofIndices(unsigned int var_number) const
+  const std::vector<dof_id_type> & leftDofIndices(std::string var_name) const
   {
-    return _left_dof_indices[var_number];
+    auto it = _left_dof_indices.find(var_name);
+    if (it == _left_dof_indices.end())
+      mooseError("Variable ", var_name, " not found in FaceInfo object");
+    return it->second;
   }
-  std::vector<dof_id_type> & leftDofIndices(unsigned int var_number)
+  std::vector<dof_id_type> & leftDofIndices(std::string var_name)
   {
-    if (_left_dof_indices.size() <= var_number)
-      _left_dof_indices.resize(var_number + 1);
-    return _left_dof_indices[var_number];
+    return _left_dof_indices[var_name];
   }
-  const std::vector<dof_id_type> & rightDofIndices(unsigned int var_number) const
+  const std::vector<dof_id_type> & rightDofIndices(std::string var_name) const
   {
-    return _right_dof_indices[var_number];
+    auto it = _right_dof_indices.find(var_name);
+    if (it == _right_dof_indices.end())
+      mooseError("Variable ", var_name, " not found in FaceInfo object");
+    return it->second;
   }
-  std::vector<dof_id_type> & rightDofIndices(unsigned int var_number)
+  std::vector<dof_id_type> & rightDofIndices(std::string var_name)
   {
-    if (_right_dof_indices.size() <= var_number)
-      _right_dof_indices.resize(var_number + 1);
-    return _right_dof_indices[var_number];
+    return _right_dof_indices[var_name];
+  }
+  const FACE_TYPE & faceType(std::string var_name) const
+  {
+    auto it = _face_types_by_var.find(var_name);
+    if (it == _face_types_by_var.end())
+      mooseError("Variable ", var_name, " not found in variable to FACE_TYPE map");
+    return it->second;
+  }
+  FACE_TYPE & faceType(std::string var_name)
+  {
+    return _face_types_by_var[var_name];
   }
 
 private:
@@ -142,8 +190,12 @@ private:
   Point _face_centroid;
 
   /// cached locations of variables in solution vectors
-  std::vector<std::vector<dof_id_type>> _left_dof_indices;
-  std::vector<std::vector<dof_id_type>> _right_dof_indices;
+  /// TODO: make this more efficient by not using a map if possible
+  std::map<std::string, std::vector<dof_id_type>> _left_dof_indices;
+  std::map<std::string, std::vector<dof_id_type>> _right_dof_indices;
+
+  /// a map that provides the information what
+  std::map<std::string, FACE_TYPE> _face_types_by_var;
 };
 
 /**
