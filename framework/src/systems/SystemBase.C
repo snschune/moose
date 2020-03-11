@@ -24,6 +24,8 @@
 #include "Assembly.h"
 #include "MooseMesh.h"
 #include "MooseUtils.h"
+#include "FVBoundaryCondition.h"
+#include "FVDirichletBCBase.h"
 
 #include "libmesh/dof_map.h"
 #include "libmesh/string_to_enum.h"
@@ -1237,7 +1239,16 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
       // get the variable, its name, and its domain of definition
       auto var = moose_vars[j];
       auto var_name = var->name();
-      const std::set<SubdomainID> & var_subdomains = var->blockIDs();
+      std::set<SubdomainID> var_subdomains = var->blockIDs();
+
+      // clear the BC lookup
+      std::set<BoundaryID> & dirichlet_bcs = p.dirichletBCIDs(var_name);
+      dirichlet_bcs.clear();
+
+      // unfortunately, MOOSE is lazy and all subdomains has its own
+      // ID. If ANY_BLOCK_ID is in var_subdomains, inject all subdomains explicitly
+      if (var_subdomains.find(Moose::ANY_BLOCK_ID) != var_subdomains.end())
+        var_subdomains = _mesh.meshSubdomains();
 
       // first stash away DoF information; this is more difficult than you would
       // think because var can be defined on the left subdomain, the right subdomain
@@ -1258,7 +1269,7 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
       p.rightDofIndices(var_name) = right_dof_indices;
 
       /**
-       * The following paragraph of code assigns the FACE_TYPE
+       * The following paragraph of code assigns the VARFaceNeighbors
        * 1. The face is an internal face of this variable if it is defined on
        *    the left and right subdomains
        * 2. The face is an invalid face of this variable if it is neither defined
@@ -1269,17 +1280,48 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
       bool var_defined_left = var_subdomains.find(left_subdomain_id) != var_subdomains.end();
       bool var_defined_right = var_subdomains.find(right_subdomain_id) != var_subdomains.end();
       if (var_defined_left && var_defined_right)
-        p.faceType(var_name) = FaceInfo::INTERNAL;
+        p.faceType(var_name) = FaceInfo::BOTH;
       else if (!var_defined_left && !var_defined_right)
-        p.faceType(var_name) = FaceInfo::INVALID;
+        p.faceType(var_name) = FaceInfo::NEITHER;
       else
       {
-        // get all BCs
-        /**
-         * This face is a boundary for the variable. The following cases apply
-         * 1. Check for cases that should throw error:
-         *    a. if var is defined on the left subdomain but
-         */
+        // first we set the LEFT/RIGHT face type
+        if (var_defined_left)
+          p.faceType(var_name) = FaceInfo::LEFT;
+        else if (var_defined_right)
+          p.faceType(var_name) = FaceInfo::RIGHT;
+        else
+          mooseError("Should never get here");
+
+        // now we figure out if there are DirichletBCs to be evaluated on this
+        // face for this variable but only do that for NonlinearVariables
+        // then we can use var_nums and filter by AttribVar
+        if (var->kind() == Moose::VAR_NONLINEAR)
+        {
+          std::set<boundary_id_type> & bids = left_bids;
+          if (var_defined_right)
+            bids = right_bids;
+
+          for (auto & bid : bids)
+          {
+            std::vector<FVBoundaryCondition *> bcs;
+            _app.theWarehouse()
+                .query()
+                .template condition<AttribSystem>("FVBC")
+                .template condition<AttribVar>(var->number())
+                .template condition<AttribBoundaries>(bid)
+                .queryInto(bcs);
+
+            for (auto & bc : bcs)
+            {
+              FVDirichletBCBase * dbc = dynamic_cast<FVDirichletBCBase *>(bc);
+              if (dbc)
+                dirichlet_bcs.insert(bid);
+            }
+          }
+        }
+
+        // TODO: we should do a lot of error checking here
       }
     }
   }

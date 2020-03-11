@@ -73,32 +73,12 @@ class FaceInfo
 public:
   FaceInfo(const Elem * elem, unsigned int side, const Elem * neighbor);
 
-  /**
-   * type of this face for each variables
-   * each variable potentially has its own domain and boundary
-   * INTERNAL: internal to the domain of the variable
-   * INVALID: variable is not defined on either subdomains (left/right)
-   * LEFT_DIRICHLET: face defines a Dirichlet BC for this variable and variable
-   *                 is defined on the left element
-   * RIGHT_DIRICHLET: face defines a Dirichlet BC for this variable and variable
-   *                  is defined on the right element
-   * LEFT_INTEGRATED: face defines an Integrated BC for this variable and variable
-   *                 is defined on the left element
-   * RIGHT_INTEGRATED: face defines an Integrated BC for this variable and variable
-   *                  is defined on the right element
-   * NATURAL_BOUNDARY: face is a boundary for this variable but no boundary conditions
-   *                   is defined
-   *
-   */
-  enum FACE_TYPE
+  enum VARFaceNeighbors
   {
-    INTERNAL = 0,
-    INVALID = 1,
-    LEFT_DIRICHLET = 2,
-    RIGHT_DIRICHLET = 3,
-    LEFT_INTEGRATED = 4,
-    RIGHT_INTEGRATED = 5,
-    NATURAL_BOUNDARY = 6
+    BOTH = 0,
+    NEITHER = 1,
+    LEFT = 2,
+    RIGHT = 3
   };
 
   ///@{ returns the face area of face id
@@ -159,16 +139,27 @@ public:
   {
     return _right_dof_indices[var_name];
   }
-  const FACE_TYPE & faceType(std::string var_name) const
+  const VARFaceNeighbors & faceType(std::string var_name) const
   {
     auto it = _face_types_by_var.find(var_name);
     if (it == _face_types_by_var.end())
-      mooseError("Variable ", var_name, " not found in variable to FACE_TYPE map");
+      mooseError("Variable ", var_name, " not found in variable to VARFaceNeighbors map");
     return it->second;
   }
-  FACE_TYPE & faceType(std::string var_name)
+  VARFaceNeighbors & faceType(std::string var_name)
   {
     return _face_types_by_var[var_name];
+  }
+  const std::set<BoundaryID> & dirichletBCIDs(std::string var_name) const
+  {
+    auto it = _dirichlet_boundary_ids.find(var_name);
+    if (it == _dirichlet_boundary_ids.end())
+      mooseError("Variable ", var_name, " not found in variable to Dirichlet BC ID map");
+    return it->second;
+  }
+  std::set<BoundaryID> & dirichletBCIDs(std::string var_name)
+  {
+    return _dirichlet_boundary_ids[var_name];
   }
 
 private:
@@ -194,8 +185,13 @@ private:
   std::map<std::string, std::vector<dof_id_type>> _left_dof_indices;
   std::map<std::string, std::vector<dof_id_type>> _right_dof_indices;
 
-  /// a map that provides the information what
-  std::map<std::string, FACE_TYPE> _face_types_by_var;
+  /// a map that provides the information what face type this is for each variable
+  std::map<std::string, VARFaceNeighbors> _face_types_by_var;
+
+  /// a map that keeps track of which sideset define a DirichletBC for each variable
+  /// TODO: is/should it permissible to add a face to two sidesets and define Dirichlet BCs
+  /// on both sidesets for the same variable?
+  std::map<std::string, std::set<BoundaryID>> _dirichlet_boundary_ids;
 };
 
 /**
