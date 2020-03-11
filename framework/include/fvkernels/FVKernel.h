@@ -12,11 +12,6 @@
 class FaceInfo;
 class SubProblem;
 
-// TODO: implement this eventually
-class FVBoundaryCondition
-{
-};
-
 class FVKernel : public MooseObject,
                  public TaggingInterface,
                  public TransientInterface,
