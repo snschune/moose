@@ -167,14 +167,14 @@ public:
     for (size_t i = 0; i < other._props.size(); i++)
     {
       if (_props.size() <= i)
-        continue;
+        break;
       auto src = other._props[i];
       auto dst = _props[i];
       if (!src || !dst)
         continue;
 
       if (dst->size() != src->size())
-        mooseError("copying properties with different numbers of quadrature points between "
+        mooseError("cannot copy properties with differing quadrature point counts between "
                    "MaterialData objects");
 
       for (unsigned int qp = 0; qp < src->size(); qp++)
