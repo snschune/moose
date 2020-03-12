@@ -1217,20 +1217,19 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
     if (right_elem)
       right_subdomain_id = right_elem->subdomain_id();
 
-    // get all the sidesets that this face is contained in, but
-    // note that these are different for the left and the right
-    std::set<boundary_id_type> left_bids;
-    std::set<boundary_id_type> right_bids;
+    // get all the sidesets that this face is contained in
+    std::set<boundary_id_type> & boundary_ids = p.boundaryIDs();
+    boundary_ids.clear();
 
     auto lit = side_map.find(Keytype(&left_elem, p.leftSideID()));
     if (lit != side_map.end())
-      left_bids = lit->second;
+      boundary_ids.insert(lit->second.begin(), lit->second.end());
 
     if (right_elem)
     {
       auto rit = side_map.find(Keytype(right_elem, p.rightSideID()));
       if (rit != side_map.end())
-        right_bids = rit->second;
+        boundary_ids.insert(rit->second.begin(), rit->second.end());
     }
 
     // loop through vars
@@ -1240,10 +1239,6 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
       auto var = moose_vars[j];
       auto var_name = var->name();
       std::set<SubdomainID> var_subdomains = var->blockIDs();
-
-      // clear the BC lookup
-      std::set<BoundaryID> & dirichlet_bcs = p.dirichletBCIDs(var_name);
-      dirichlet_bcs.clear();
 
       // unfortunately, MOOSE is lazy and all subdomains has its own
       // ID. If ANY_BLOCK_ID is in var_subdomains, inject all subdomains explicitly
@@ -1285,43 +1280,13 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
         p.faceType(var_name) = FaceInfo::NEITHER;
       else
       {
-        // first we set the LEFT/RIGHT face type
+        // this is a boundary face for this variable, set left or right
         if (var_defined_left)
           p.faceType(var_name) = FaceInfo::LEFT;
         else if (var_defined_right)
           p.faceType(var_name) = FaceInfo::RIGHT;
         else
           mooseError("Should never get here");
-
-        // now we figure out if there are DirichletBCs to be evaluated on this
-        // face for this variable but only do that for NonlinearVariables
-        // then we can use var_nums and filter by AttribVar
-        if (var->kind() == Moose::VAR_NONLINEAR)
-        {
-          std::set<boundary_id_type> & bids = left_bids;
-          if (var_defined_right)
-            bids = right_bids;
-
-          for (auto & bid : bids)
-          {
-            std::vector<FVBoundaryCondition *> bcs;
-            _app.theWarehouse()
-                .query()
-                .template condition<AttribSystem>("FVBC")
-                .template condition<AttribVar>(var->number())
-                .template condition<AttribBoundaries>(bid)
-                .queryInto(bcs);
-
-            for (auto & bc : bcs)
-            {
-              FVDirichletBCBase * dbc = dynamic_cast<FVDirichletBCBase *>(bc);
-              if (dbc)
-                dirichlet_bcs.insert(bid);
-            }
-          }
-        }
-
-        // TODO: we should do a lot of error checking here
       }
     }
   }
