@@ -150,16 +150,13 @@ public:
   {
     return _face_types_by_var[var_name];
   }
-  const std::set<BoundaryID> & dirichletBCIDs(std::string var_name) const
+  const std::set<BoundaryID> & boundaryIDs() const
   {
-    auto it = _dirichlet_boundary_ids.find(var_name);
-    if (it == _dirichlet_boundary_ids.end())
-      mooseError("Variable ", var_name, " not found in variable to Dirichlet BC ID map");
-    return it->second;
+    return _boundary_ids;
   }
-  std::set<BoundaryID> & dirichletBCIDs(std::string var_name)
+  std::set<BoundaryID> & boundaryIDs()
   {
-    return _dirichlet_boundary_ids[var_name];
+    return _boundary_ids;
   }
 
 private:
@@ -188,10 +185,8 @@ private:
   /// a map that provides the information what face type this is for each variable
   std::map<std::string, VARFaceNeighbors> _face_types_by_var;
 
-  /// a map that keeps track of which sideset define a DirichletBC for each variable
-  /// TODO: is/should it permissible to add a face to two sidesets and define Dirichlet BCs
-  /// on both sidesets for the same variable?
-  std::map<std::string, std::set<BoundaryID>> _dirichlet_boundary_ids;
+  /// the set of boundary ids that this face is associated with
+  std::set<BoundaryID> _boundary_ids;
 };
 
 /**
