@@ -9,12 +9,12 @@
 
 #pragma once
 
-#include "FVDirichletBCBase.h"
+#include "FVBoundaryCondition.h"
 
 /**
  * Base class for
  */
-class FVDirichletBCBase : public FVBoundaryCondition
+class FVDirichletBC : public FVBoundaryCondition
 {
 public:
   /**
@@ -22,10 +22,9 @@ public:
    * @param parameters The InputParameters for the object
    * @param nodal Whether this BC is applied to nodes or not
    */
-  FVDirichletBCBase(const InputParameters & parameters);
+  FVDirichletBC(const InputParameters & parameters);
 
   static InputParameters validParams();
 
-protected:
-  virtual Real boundaryValue() = 0;
+  virtual Real boundaryValue(const FaceInfo & fi) = 0;
 };

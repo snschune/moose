@@ -15,6 +15,7 @@
 #include "MooseException.h"
 #include "MooseVariableFVBase.h"
 #include "FVKernel.h"
+#include "FVBoundaryCondition.h"
 #include "FEProblem.h"
 #include "SwapBackSentinel.h"
 #include "libmesh/libmesh_exceptions.h"
@@ -320,51 +321,6 @@ ComputeFVFluxThread<RangeType>::reinitVariables(const FaceInfo & fi)
 
 template <typename RangeType>
 void
-ComputeFVFluxThread<RangeType>::post()
-{
-  Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
-  if (_do_jacobian)
-    _fe_problem.addCachedJacobian(_tid);
-  else
-    _fe_problem.addCachedResidual(_tid);
-
-  _fe_problem.clearActiveElementalMooseVariables(_tid);
-  _fe_problem.clearActiveMaterialProperties(_tid);
-}
-
-template <typename RangeType>
-void
-ComputeFVFluxThread<RangeType>::postFace(const FaceInfo & /*fi*/)
-{
-  _num_cached++;
-  if (_do_jacobian)
-  {
-    // TODO: do we need both calls - or just the neighbor one? - confirm this
-    _fe_problem.cacheJacobian(_tid);
-    _fe_problem.cacheJacobianNeighbor(_tid);
-
-    if (_num_cached % 20 == 0)
-    {
-      Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
-      _fe_problem.addCachedJacobian(_tid);
-    }
-  }
-  else
-  {
-    // TODO: do we need both calls - or just the neighbor one? - confirm this
-    _fe_problem.cacheResidual(_tid);
-    _fe_problem.cacheResidualNeighbor(_tid);
-
-    if (_num_cached % 20 == 0)
-    {
-      Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
-      _fe_problem.addCachedResidual(_tid);
-    }
-  }
-}
-
-template <typename RangeType>
-void
 ComputeFVFluxThread<RangeType>::onFace(const FaceInfo & fi)
 {
   std::vector<FVFluxKernelBase *> kernels;
@@ -404,13 +360,14 @@ template <typename RangeType>
 void
 ComputeFVFluxThread<RangeType>::onBoundary(const FaceInfo & fi, BoundaryID bnd_id)
 {
-  std::vector<FVBoundaryCondition *> bcs;
+  std::vector<FVFluxBC *> bcs;
   _fe_problem.theWarehouse()
       .query()
-      .template condition<AttribSystem>("FVBC")
+      .template condition<AttribSystem>("FVBoundaryCondition")
       .template condition<AttribBoundaries>(bnd_id)
       .template condition<AttribThread>(_tid)
       .template condition<AttribVectorTags>(_tags)
+      .template condition<AttribInterfaces>(Interfaces::FVFluxBC)
       .queryInto(bcs);
   if (bcs.size() == 0)
     return;
@@ -423,8 +380,55 @@ ComputeFVFluxThread<RangeType>::onBoundary(const FaceInfo & fi, BoundaryID bnd_i
   _fe_problem.reinitMaterialsBoundary(bnd_id, _tid);
 
   for (const auto & bc : bcs)
-    /*TODO: implement FV BCs - so we can bc->computeResidual(); here*/;
-  // TODO: don't forget to add the if(_do_jacobian) logic too!
+    if (_do_jacobian)
+      bc->computeJacobian(fi);
+    else
+      bc->computeResidual(fi);
+}
+
+template <typename RangeType>
+void
+ComputeFVFluxThread<RangeType>::postFace(const FaceInfo & /*fi*/)
+{
+  _num_cached++;
+  if (_do_jacobian)
+  {
+    // TODO: do we need both calls - or just the neighbor one? - confirm this
+    _fe_problem.cacheJacobian(_tid);
+    _fe_problem.cacheJacobianNeighbor(_tid);
+
+    if (_num_cached % 20 == 0)
+    {
+      Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
+      _fe_problem.addCachedJacobian(_tid);
+    }
+  }
+  else
+  {
+    // TODO: do we need both calls - or just the neighbor one? - confirm this
+    _fe_problem.cacheResidual(_tid);
+    _fe_problem.cacheResidualNeighbor(_tid);
+
+    if (_num_cached % 20 == 0)
+    {
+      Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
+      _fe_problem.addCachedResidual(_tid);
+    }
+  }
+}
+
+template <typename RangeType>
+void
+ComputeFVFluxThread<RangeType>::post()
+{
+  Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
+  if (_do_jacobian)
+    _fe_problem.addCachedJacobian(_tid);
+  else
+    _fe_problem.addCachedResidual(_tid);
+
+  _fe_problem.clearActiveElementalMooseVariables(_tid);
+  _fe_problem.clearActiveMaterialProperties(_tid);
 }
 
 template <typename RangeType>

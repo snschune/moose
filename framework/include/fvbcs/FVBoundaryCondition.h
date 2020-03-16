@@ -40,19 +40,19 @@ class Assembly;
  * Base class for creating new types of boundary conditions.
  */
 class FVBoundaryCondition : public MooseObject,
-                          public BoundaryRestrictableRequired,
-                          public SetupInterface,
-                          public FunctionInterface,
-                          public DistributionInterface,
-                          public UserObjectInterface,
-                          public TransientInterface,
-                          public PostprocessorInterface,
-                          public VectorPostprocessorInterface,
-                          public GeometricSearchInterface,
-                          public Restartable,
-                          public MeshChangedInterface,
-                          public TaggingInterface,
-                          public MooseVariableInterface<Real>
+                            public BoundaryRestrictableRequired,
+                            public SetupInterface,
+                            public FunctionInterface,
+                            public DistributionInterface,
+                            public UserObjectInterface,
+                            public TransientInterface,
+                            public PostprocessorInterface,
+                            public VectorPostprocessorInterface,
+                            public GeometricSearchInterface,
+                            public Restartable,
+                            public MeshChangedInterface,
+                            public TaggingInterface,
+                            public MooseVariableInterface<Real>
 {
 public:
   /**
@@ -90,4 +90,20 @@ protected:
 
   /// Mesh this BC is defined on
   MooseMesh & _mesh;
+};
+
+class FVFluxBC : public FVBoundaryCondition
+{
+public:
+  FVFluxBC(const InputParameters & parameters) : FVBoundaryCondition(parameters){};
+
+  static InputParameters validParams() { return FVBoundaryCondition::validParams(); }
+
+  virtual void computeResidual(const FaceInfo & fi) { mooseError("unimplemented"); }
+
+  virtual void computeJacobian(const FaceInfo & fi) { mooseError("unimplemented"); }
+
+protected:
+  virtual Real computeQpResidual() = 0;
+  virtual Real computeQpJacobian() = 0;
 };

@@ -7,16 +7,15 @@
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
 
-#include "FVDirichletBCBase.h"
+#include "FVDirichletBC.h"
 
 InputParameters
-FVDirichletBCBase::validParams()
+FVDirichletBC::validParams()
 {
   InputParameters params = FVBoundaryCondition::validParams();
   return params;
 }
 
-FVDirichletBCBase::FVDirichletBCBase(const InputParameters & parameters)
-  : FVBoundaryCondition(parameters)
+FVDirichletBC::FVDirichletBC(const InputParameters & parameters) : FVBoundaryCondition(parameters)
 {
 }

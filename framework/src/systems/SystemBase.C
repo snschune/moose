@@ -25,7 +25,7 @@
 #include "MooseMesh.h"
 #include "MooseUtils.h"
 #include "FVBoundaryCondition.h"
-#include "FVDirichletBCBase.h"
+#include "FVDirichletBC.h"
 
 #include "libmesh/dof_map.h"
 #include "libmesh/string_to_enum.h"
@@ -1264,7 +1264,7 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
       p.rightDofIndices(var_name) = right_dof_indices;
 
       /**
-       * The following paragraph of code assigns the VARFaceNeighbors
+       * The following paragraph of code assigns the VarFaceNeighbors
        * 1. The face is an internal face of this variable if it is defined on
        *    the left and right subdomains
        * 2. The face is an invalid face of this variable if it is neither defined
@@ -1275,16 +1275,16 @@ SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
       bool var_defined_left = var_subdomains.find(left_subdomain_id) != var_subdomains.end();
       bool var_defined_right = var_subdomains.find(right_subdomain_id) != var_subdomains.end();
       if (var_defined_left && var_defined_right)
-        p.faceType(var_name) = FaceInfo::BOTH;
+        p.faceType(var_name) = FaceInfo::VarFaceNeighbors::BOTH;
       else if (!var_defined_left && !var_defined_right)
-        p.faceType(var_name) = FaceInfo::NEITHER;
+        p.faceType(var_name) = FaceInfo::VarFaceNeighbors::NEITHER;
       else
       {
         // this is a boundary face for this variable, set left or right
         if (var_defined_left)
-          p.faceType(var_name) = FaceInfo::LEFT;
+          p.faceType(var_name) = FaceInfo::VarFaceNeighbors::LEFT;
         else if (var_defined_right)
-          p.faceType(var_name) = FaceInfo::RIGHT;
+          p.faceType(var_name) = FaceInfo::VarFaceNeighbors::RIGHT;
         else
           mooseError("Should never get here");
       }

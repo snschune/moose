@@ -73,12 +73,12 @@ class FaceInfo
 public:
   FaceInfo(const Elem * elem, unsigned int side, const Elem * neighbor);
 
-  enum VARFaceNeighbors
+  enum class VarFaceNeighbors
   {
-    BOTH = 0,
-    NEITHER = 1,
-    LEFT = 2,
-    RIGHT = 3
+    BOTH,
+    NEITHER,
+    LEFT,
+    RIGHT
   };
 
   ///@{ returns the face area of face id
@@ -139,17 +139,14 @@ public:
   {
     return _right_dof_indices[var_name];
   }
-  const VARFaceNeighbors & faceType(std::string var_name) const
+  const VarFaceNeighbors & faceType(std::string var_name) const
   {
     auto it = _face_types_by_var.find(var_name);
     if (it == _face_types_by_var.end())
-      mooseError("Variable ", var_name, " not found in variable to VARFaceNeighbors map");
+      mooseError("Variable ", var_name, " not found in variable to VarFaceNeighbors map");
     return it->second;
   }
-  VARFaceNeighbors & faceType(std::string var_name)
-  {
-    return _face_types_by_var[var_name];
-  }
+  VarFaceNeighbors & faceType(std::string var_name) { return _face_types_by_var[var_name]; }
   const std::set<BoundaryID> & boundaryIDs() const
   {
     return _boundary_ids;
@@ -183,7 +180,7 @@ private:
   std::map<std::string, std::vector<dof_id_type>> _right_dof_indices;
 
   /// a map that provides the information what face type this is for each variable
-  std::map<std::string, VARFaceNeighbors> _face_types_by_var;
+  std::map<std::string, VarFaceNeighbors> _face_types_by_var;
 
   /// the set of boundary ids that this face is associated with
   std::set<BoundaryID> _boundary_ids;
