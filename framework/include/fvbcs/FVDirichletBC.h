@@ -26,5 +26,5 @@ public:
 
   static InputParameters validParams();
 
-  virtual Real boundaryValue(const FaceInfo & fi) = 0;
+  virtual Real boundaryValue(const FaceInfo & fi);
 };

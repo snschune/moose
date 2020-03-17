@@ -9,13 +9,22 @@
 
 #include "FVDirichletBC.h"
 
+registerMooseObject("MooseApp", FVDirichletBC);
+
 InputParameters
 FVDirichletBC::validParams()
 {
   InputParameters params = FVBoundaryCondition::validParams();
+  params.addRequiredParam<Real>("value", "value to enforce at the boundary face");
   return params;
 }
 
 FVDirichletBC::FVDirichletBC(const InputParameters & parameters) : FVBoundaryCondition(parameters)
 {
+}
+
+Real
+FVDirichletBC::boundaryValue(const FaceInfo & /*fi*/)
+{
+  return getParam<Real>("value");
 }
