@@ -173,12 +173,9 @@ ThreadedFaceLoop<RangeType>::operator()(const RangeType & range, bool bypass_thr
         if (_neighbor_subdomain != _old_neighbor_subdomain)
           neighborSubdomainChanged();
 
-        // get elem's face residual contribution to it's neighbor
         onFace(*faceinfo);
         postFace(*faceinfo);
 
-        // boundary faces only border one element and so only contribute to
-        // one element's residual
         std::vector<BoundaryID> boundary_ids = _mesh.getBoundaryIDs(&elem, side);
         for (auto it = boundary_ids.begin(); it != boundary_ids.end(); ++it)
           onBoundary(*faceinfo, *it);
@@ -326,11 +323,11 @@ ComputeFVFluxThread<RangeType>::onFace(const FaceInfo & fi)
   std::vector<FVFluxKernelBase *> kernels;
   auto q = _fe_problem.theWarehouse()
                .query()
+               .template condition<AttribSystem>("FVKernel")
                .template condition<AttribInterfaces>(Interfaces::FVFluxKernel)
                .template condition<AttribSubdomains>(_subdomain)
                .template condition<AttribVectorTags>(_tags)
                .template condition<AttribThread>(_tid)
-               .template condition<AttribSystem>("FVKernel")
                .template condition<AttribIsADJac>(_do_jacobian)
                .queryInto(kernels);
 
@@ -376,6 +373,8 @@ ComputeFVFluxThread<RangeType>::onBoundary(const FaceInfo & fi, BoundaryID bnd_i
 
   SwapBackSentinel sentinel(_fe_problem, &FEProblem::swapBackMaterialsFace, _tid);
 
+  // boundary faces only border one element and so only contribute to one element's residual
+  // and we only need to reinit the one side.
   _fe_problem.reinitMaterialsFace(fi.leftElem().subdomain_id(), _tid);
   _fe_problem.reinitMaterialsBoundary(bnd_id, _tid);
 
