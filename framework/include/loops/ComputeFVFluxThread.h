@@ -312,14 +312,15 @@ ComputeFVFluxThread<RangeType>::reinitVariables(const FaceInfo & fi)
 
     // FIXME/TODO: this needs to be enabled/uncommented, but it currently
     // fails due to differing number of qp's for props between src and dst.
-    //dst->copyPropsFrom(*src);
+    dst->copyPropsFrom(*src);
   }
 
   // this is the swap-back object - don't forget to catch it into local var
-  std::function<void()> fn = [this] {
+  std::function<void()> fn = [this, &fi] {
     _fe_problem.swapBackMaterials(_tid);
     _fe_problem.swapBackMaterialsFace(_tid);
-    _fe_problem.swapBackMaterialsNeighbor(_tid);
+    if (!fi.isBoundary())
+      _fe_problem.swapBackMaterialsNeighbor(_tid);
   };
   return OnScopeExit(fn);
 }

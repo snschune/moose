@@ -96,13 +96,13 @@ FVFluxKernel<compute_stage>::computeResidual(const FaceInfo & fi)
   _normal = fi.normal();
   auto r = MetaPhysicL::raw_value(fi.faceArea() * computeQpResidual());
 
-  std::cout << "varname=" << _var.name() << ", elem=" << fi.leftElem().id();
-  if (fi.rightElemPtr())
-    std::cout << ", right=" << fi.rightElem().id();
-  std::cout << ":\n";
+  //std::cout << "varname=" << _var.name() << ", elem=" << fi.leftElem().id();
+  //if (fi.rightElemPtr())
+  //  std::cout << ", right=" << fi.rightElem().id();
+  //std::cout << ":\n";
 
-  for (auto i : _var.dofIndices())
-    std::cout << "    dofindices=" << i << "\n";
+  //for (auto i : _var.dofIndices())
+  //  std::cout << "    dofindices=" << i << "\n";
 
   auto ft = fi.faceType(_var.name());
   if (ownLeftElem() && (ft == FaceInfo::VarFaceNeighbors::LEFT || ft == FaceInfo::VarFaceNeighbors::BOTH))

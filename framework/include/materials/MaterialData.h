@@ -174,8 +174,8 @@ public:
         continue;
 
       if (dst->size() != src->size())
-        mooseError("cannot copy properties with differing quadrature point counts between "
-                   "MaterialData objects");
+        // TODO: is this really safe to do?
+        dst->resize(src->size());
 
       for (unsigned int qp = 0; qp < src->size(); qp++)
         dst->qpCopy(qp, src, qp);
