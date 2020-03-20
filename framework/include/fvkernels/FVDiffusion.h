@@ -14,7 +14,24 @@ protected:
   virtual ADReal computeQpJacobian() override;
 
   const ADMaterialProperty(Real) & _coeff_left;
-  const MaterialProperty<Real> & _coeff_right;
+  const ADMaterialProperty(Real) & _coeff_right;
+
+  usingFVFluxKernelMembers;
+};
+
+template <ComputeStage compute_stage>
+class FVAdvection : public FVFluxKernel<compute_stage>
+{
+public:
+  static InputParameters validParams();
+  FVAdvection(const InputParameters & params);
+
+protected:
+  virtual ADReal computeQpResidual() override;
+  virtual ADReal computeQpJacobian() override;
+
+  const ADMaterialProperty(RealVectorValue) & _vel_left;
+  const ADMaterialProperty(RealVectorValue) & _vel_right;
 
   usingFVFluxKernelMembers;
 };
