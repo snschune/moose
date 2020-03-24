@@ -1,0 +1,9 @@
+[Tests]
+  [./test]
+    type = 'Exodiff'
+    input = 'fv_simple_diffusion.i'
+    exodiff = 'fv_simple_diffusion_out.e'
+
+    requirement = 'The system shall run a simple 2D linear diffusion problem using the finite volume method with Dirichlet boundary conditions on a regular mesh.'
+  [../]
+[]
