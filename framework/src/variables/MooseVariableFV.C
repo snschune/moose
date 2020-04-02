@@ -278,6 +278,8 @@ MooseVariableFV<OutputType>::computeFaceValues(const FaceInfo & fi)
 {
   _element_data->setGeometry(Moose::Face);
   _neighbor_data->setGeometry(Moose::Face);
+  _element_data->hasDirichletBC(false);
+  _neighbor_data->hasDirichletBC(false);
 
   auto facetype = fi.faceType(_var_name);
   if (facetype == FaceInfo::VarFaceNeighbors::NEITHER)

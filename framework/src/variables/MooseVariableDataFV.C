@@ -521,8 +521,9 @@ MooseVariableDataFV<OutputType>::computeGhostValuesFace(
       .template condition<AttribVar>(_var_num)
       .template condition<AttribInterfaces>(Interfaces::FVDirichletBC)
       .queryInto(bcs);
+  // TODO: this is already tested for before (in CheckFVBCAction)
   mooseAssert(bcs.size() <= 1, "cannot have multiple dirichlet BCs on the same boundary");
-
+  _has_dirichlet_bc = bcs.size() > 0;
 
   // These need to be initialized but we can't use the regular computeAD
   // routine because that routine accesses the solution which doesn't exist
