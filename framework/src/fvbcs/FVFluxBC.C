@@ -84,28 +84,6 @@ FVFluxBC<compute_stage>::computeJacobian(const FaceInfo & fi)
   unsigned int var_num = _var.number();
   unsigned int nvars = sys.system().n_vars();
 
-  // We might currently be running on a face for which this kernel's variable
-  // is only defined on one side. If this is the case, we need to only
-  // calculate+add the residual contribution if there is a dirichlet bc for
-  // the active face+variable.
-  //
-  // TODO: Running this query here is slow and redundant
-  // - since we run the same query inside the MooseVariableDataFV when
-  // computing the ghost cell values.  Perhaps we can mark a boolean on the
-  // FaceInfo object when we run the query there and just check it on the
-  // FaceInfo object here.
-  std::vector<FVDirichletBC *> bcs;
-  _subproblem.getMooseApp()
-      .theWarehouse()
-      .query()
-      .template condition<AttribSystem>("FVBoundaryCondition")
-      .template condition<AttribThread>(_tid)
-      .template condition<AttribBoundaries>(fi.boundaryIDs())
-      .template condition<AttribVar>(_var.number())
-      .template condition<AttribInterfaces>(Interfaces::FVDirichletBC)
-      .queryInto(bcs);
-  bool have_dirichlet_bcs = bcs.size() > 0;
-
   auto ft = fi.faceType(_var.name());
   prepareMatrixTag(_assembly, var_num, var_num);
   if (ft == FaceInfo::VarFaceNeighbors::LEFT)
