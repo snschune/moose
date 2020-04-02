@@ -83,13 +83,17 @@ ComputeJacobianThread::computeJacobian()
         kernel->computeJacobian();
   }
 
+  // TODO: I needed to remove some filtering criteria here to
+  // find the time kernel [in my example].
+  // The one that actually did the trick was removing the
+  // _tag condition. Not sure why. Needs investigation.
   std::vector<FVElementalKernel *> kernels;
   _fe_problem.theWarehouse()
              .query()
              .template condition<AttribSystem>("FVElementalKernel")
              .template condition<AttribSubdomains>(_subdomain)
              .template condition<AttribThread>(_tid)
-             .template condition<AttribVectorTags>(_tags)
+             .template condition<AttribMatrixTags>(_tags)
              .template condition<AttribIsADJac>(true)
              .queryInto(kernels);
 
