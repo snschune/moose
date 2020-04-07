@@ -90,6 +90,7 @@
 #include "TimedPrint.h"
 #include "MaxVarNDofsPerElem.h"
 #include "MaxVarNDofsPerNode.h"
+#include "FVKernel.h"
 
 #include "libmesh/exodusII_io.h"
 #include "libmesh/quadrature.h"
@@ -97,6 +98,8 @@
 #include "libmesh/nonlinear_solver.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/string_to_enum.h"
+
+class FaceInfo;
 
 // Anonymous namespace for helper function
 namespace
@@ -2616,6 +2619,37 @@ FEProblemBase::addDGKernel(const std::string & dg_kernel_name,
   _nl->addDGKernel(dg_kernel_name, name, parameters);
 
   _has_internal_edge_residual_objects = true;
+}
+
+void
+FEProblemBase::addFVKernel(const std::string & fv_kernel_name,
+                           const std::string & name,
+                           InputParameters & parameters)
+{
+  if (_displaced_problem && parameters.get<bool>("use_displaced_mesh"))
+  {
+    parameters.set<SubProblem *>("_subproblem") = _displaced_problem.get();
+    parameters.set<SystemBase *>("_sys") = &_displaced_problem->nlSys();
+  }
+  else
+  {
+
+    // TODO: this if clause was copied from DG Kernels - do we really need it for FV?
+    if (_displaced_problem == nullptr && parameters.get<bool>("use_displaced_mesh"))
+    {
+      if (parameters.have_parameter<bool>("use_displaced_mesh"))
+        parameters.set<bool>("use_displaced_mesh") = false;
+    }
+
+    parameters.set<SubProblem *>("_subproblem") = this;
+    parameters.set<SystemBase *>("_sys") = _nl.get();
+  }
+
+  for (THREAD_ID tid = 0; tid < libMesh::n_threads(); ++tid)
+  {
+    std::shared_ptr<FVKernel> k = _factory.create<FVKernel>(fv_kernel_name, name, parameters, tid);
+    theWarehouse().add(k, "FVKernels");
+  }
 }
 
 // InterfaceKernels ////
