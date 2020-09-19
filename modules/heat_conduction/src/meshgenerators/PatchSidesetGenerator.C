@@ -49,8 +49,8 @@ PatchSidesetGenerator::validParams()
   params.addRequiredRangeCheckedParam<unsigned int>(
       "n_patches", "n_patches>0", "Number of patches");
 
-  MooseEnum partitioning("default=-3 metis=-2 parmetis=-1 linear=0 centroid hilbert_sfc morton_sfc",
-                         "default");
+  MooseEnum partitioning(
+      "default=-3 metis=-2 parmetis=-1 linear=0 grid=2 centroid hilbert_sfc morton_sfc", "default");
   params.addParam<MooseEnum>(
       "partitioner",
       partitioning,
@@ -87,6 +87,9 @@ PatchSidesetGenerator::generate()
 
   // Get a reference to our BoundaryInfo object for later use
   BoundaryInfo & boundary_info = mesh->get_boundary_info();
+
+  // get dimensionality
+  _dim = mesh->mesh_dimension() - 1;
 
   // get a list of all sides; vector of tuples (elem, loc_side, side_set)
   auto side_list = boundary_info.build_active_side_list();
@@ -175,8 +178,14 @@ PatchSidesetGenerator::generate()
 
   // partition the boundary mesh
   boundary_mesh->prepare_for_use();
-  MooseMesh::setPartitioner(*boundary_mesh, _partitioner_name, false, _pars, *this);
-  boundary_mesh->partition(_n_patches);
+  _n_boundary_mesh_elems = boundary_mesh->n_elem();
+  if (_partitioner_name == "grid")
+    partition(*boundary_mesh);
+  else
+  {
+    MooseMesh::setPartitioner(*boundary_mesh, _partitioner_name, false, _pars, *this);
+    boundary_mesh->partition(_n_patches);
+  }
 
   // prepare sideset names and boundary_ids added to mesh
   std::vector<BoundaryName> sideset_names =
@@ -217,6 +226,193 @@ PatchSidesetGenerator::generate()
   return mesh;
 }
 
+void
+PatchSidesetGenerator::partition(MeshBase & mesh) const
+{
+  if (_partitioner_name != "grid")
+    return;
+
+  // subdivide by length along the curve
+  if (_dim == 1)
+    mooseError("1D damnit");
+  else
+  {
+    // compute the target area for each partition
+    Real target_area = 0;
+    for (auto & elem_ptr : mesh.active_element_ptr_range())
+      target_area += elem_ptr->volume();
+    target_area /= _n_patches;
+
+    // initial partition
+    auto begin = mesh.active_local_elements_begin();
+    auto end = mesh.active_local_elements_end();
+
+    // find element with lowest degree
+    unsigned int min_degree = 1000;
+    const Elem * min_degree_elem = nullptr;
+    for (auto it = begin; it != end; ++it)
+    {
+      unsigned int degree = 0;
+      const Elem * elem = *it;
+      for (unsigned int j = 0; j < elem->n_sides(); ++j)
+        if (elem->neighbor_ptr(j))
+          ++degree;
+
+      if (degree < min_degree)
+      {
+        min_degree = degree;
+        min_degree_elem = elem;
+      }
+    }
+
+    // initial point distribution, add min_degree elem as first center
+    std::vector<const Elem *> bubble_centers = {mostDistantElement({min_degree_elem})};
+    for (unsigned int j = 1; j < _n_patches; ++j)
+    {
+      const Elem * new_center = mostDistantElement(bubble_centers);
+      bubble_centers.push_back(new_center);
+    }
+
+    // main bubble growth and recentering loop
+    std::vector<Bubble> bubbles;
+    bool keep_going = true;
+    while (keep_going)
+    {
+      // grow bubbles from existing centers
+      growBubbles(bubble_centers, bubbles);
+
+      // find new centroid elements for all bubbles
+      std::vector<const Elem *> new_bubble_centers(_n_patches);
+      for (unsigned int j = 0; j < _n_patches; ++j)
+        new_bubble_centers[j] = bubbles[j].bubbleCentroidElem();
+
+      // has anything changed?; if so keep going
+      keep_going = false;
+      for (unsigned int j = 0; j < _n_patches; ++j)
+        if (bubble_centers[j] != new_bubble_centers[j])
+          keep_going = true;
+
+      // copy over bubble centers
+      bubble_centers = new_bubble_centers;
+    }
+
+//for (unsigned int j = 0; j < _n_patches; ++j)
+//{
+//  std::cout << "Bubble " << j << ": ";
+//  for (auto & e : bubbles[j].members())
+//    std::cout << e->id() << " ";
+//  std::cout << std::endl;
+//}
+
+    // compare centroid elems new vs old
+    //for (unsigned int j = 0; j < _n_patches; ++j)
+    //  std::cout << bubble_centers[j]->id() << " " << new_bubble_centers[j]->id() << std::endl;
+
+    // assign partition
+    for (unsigned int j = 0; j < _n_patches; ++j)
+      for (auto & e : bubbles[j].members())
+        mesh.elem_ptr(e->id())->processor_id() = j;
+  }
+}
+
+void
+PatchSidesetGenerator::growBubbles(const std::vector<const Elem *> & seeds,
+                                   std::vector<Bubble> & bubbles) const
+{
+  // prepare bubbles & insert seeds
+  bubbles.clear();
+  bubbles.resize(seeds.size());
+  std::set<const Elem *> assigned_elems;
+  for (unsigned int j = 0; j < seeds.size(); ++j)
+  {
+    bubbles[j] = PatchSidesetGenerator::Bubble(seeds[j]);
+    assigned_elems.insert(seeds[j]);
+  }
+
+  // initialize frontier
+  for (auto & b : bubbles)
+    b.computeFrontier(assigned_elems);
+
+  // main loop for growing bubbles
+  while (assigned_elems.size() < _n_boundary_mesh_elems)
+  {
+    // find bubble with smallest workload
+    unsigned int min_b = 0;
+    Real min_workload = std::numeric_limits<double>::max();
+    for (unsigned int j = 0; j < bubbles.size(); ++j)
+      if (bubbles[j].workload() < min_workload && bubbles[j].frontierSize() > 0)
+      {
+        min_workload = bubbles[j].workload();
+        min_b = j;
+      }
+
+    // find the element with shortest distance from seed
+    const Elem * candidate = bubbles[min_b].closestFrontierElem();
+
+    // add to
+    assigned_elems.insert(candidate);
+
+    // modify all bubbles
+    for (unsigned int j = 0; j < bubbles.size(); ++j)
+      if (j == min_b)
+        bubbles[j].addToMember(candidate, assigned_elems);
+      else
+        bubbles[j].removeFromFrontier(candidate);
+  }
+}
+
+const Elem *
+PatchSidesetGenerator::mostDistantElement(const std::vector<const Elem *> & seeds) const
+{
+  Real max_distance = 0;
+  const Elem * most_distant_elem = nullptr;
+
+  // fill visited and queue with the seeds &
+  std::set<const Elem *> visited;
+  std::queue<const Elem *> next_visits;
+  for (auto & e : seeds)
+  {
+    visited.insert(e);
+    next_visits.push(e);
+  }
+
+  // main loop of BFS
+  while (!next_visits.empty())
+  {
+    // select element from queue and remove it
+    const Elem * elem = next_visits.front();
+    next_visits.pop();
+
+    // Is this element the most distant from the seeds?
+    Real distance = std::numeric_limits<double>::max();
+    for (auto & e : seeds)
+    {
+      Real d = (elem->centroid() - e->centroid()).norm();
+      if (d < distance)
+        distance = d;
+    }
+    if (distance > max_distance)
+    {
+      max_distance = distance;
+      most_distant_elem = elem;
+    }
+
+    // look at the neighbors of elem
+    for (unsigned int j = 0; j < elem->n_sides(); ++j)
+    {
+      const Elem * neigh = elem->neighbor_ptr(j);
+      if (neigh && visited.find(neigh) == visited.end())
+      {
+        // remember that neigh was added and will be visited
+        visited.insert(neigh);
+        // inert into the queue so we actually visit neigh
+        next_visits.push(neigh);
+      }
+    }
+  }
+  return most_distant_elem;
+}
+
 std::vector<BoundaryName>
 PatchSidesetGenerator::sidesetNameHelper(const std::string & base_name) const
 {
@@ -254,4 +450,106 @@ PatchSidesetGenerator::boundaryElementHelper(MeshBase & mesh, libMesh::ElemType 
     default:
       mooseError("Unsupported element type (libMesh elem_type enum): ", type);
   }
+}
+
+PatchSidesetGenerator::Bubble::Bubble() : _workload(0), _seed(nullptr) { _member_elems.clear(); }
+
+PatchSidesetGenerator::Bubble::Bubble(const Elem * seed) : _workload(seed->volume()), _seed(seed)
+{
+  _member_elems.clear();
+  _member_elems.insert(seed);
+}
+
+void
+PatchSidesetGenerator::Bubble::computeFrontier(const std::set<const Elem *> & assigned_elems)
+{
+  _frontier.clear();
+  for (auto & elem : _member_elems)
+    for (unsigned int j = 0; j < elem->n_sides(); ++j)
+    {
+      const Elem * neigh = elem->neighbor_ptr(j);
+      if (neigh && assigned_elems.find(neigh) == assigned_elems.end() &&
+          _member_elems.find(neigh) == _member_elems.end())
+        _frontier.insert(neigh);
+    }
+}
+
+void
+PatchSidesetGenerator::Bubble::removeFromFrontier(const Elem * elem)
+{
+  const auto & it = std::find(_frontier.begin(), _frontier.end(), elem);
+  if (it != _frontier.end())
+    _frontier.erase(it);
+}
+
+void
+PatchSidesetGenerator::Bubble::addToMember(const Elem * elem,
+                                           const std::set<const Elem *> & assigned_elems)
+{
+  // remove from frontier
+  const auto & it = std::find(_frontier.begin(), _frontier.end(), elem);
+  if (it == _frontier.end())
+    ::mooseError("Elem ", elem->id(), " is not in the frontier of this bubble.");
+
+  _frontier.erase(it);
+  // add to member elems
+  if (std::find(_member_elems.begin(), _member_elems.end(), elem) != _member_elems.end())
+    ::mooseError("Elem ", elem->id(), " is about to be added to bubble but already exists.");
+  _member_elems.insert(elem);
+  _workload += elem->volume();
+
+  // update the frontier
+  for (unsigned int j = 0; j < elem->n_sides(); ++j)
+  {
+    const Elem * neigh = elem->neighbor_ptr(j);
+    if (neigh && assigned_elems.find(neigh) == assigned_elems.end() &&
+        _member_elems.find(neigh) == _member_elems.end())
+      _frontier.insert(neigh);
+  }
+}
+
+const Elem *
+PatchSidesetGenerator::Bubble::closestFrontierElem() const
+{
+  Real distance = std::numeric_limits<double>::max();
+  const Elem * closest_frontier_elem = nullptr;
+  for (auto & elem : _frontier)
+  {
+    Real d = (_seed->centroid() - elem->centroid()).norm();
+    if (d < distance)
+    {
+      distance = d;
+      closest_frontier_elem = elem;
+    }
+  }
+  return closest_frontier_elem;
+}
+
+const Elem *
+PatchSidesetGenerator::Bubble::bubbleCentroidElem() const
+{
+  // compute centroid
+  Point centroid(0, 0, 0);
+  Real volume = 0;
+  for (auto & e : _member_elems)
+  {
+    centroid += e->volume() * e->centroid();
+    volume += e->volume();
+  }
+  centroid /= volume;
+
+  // find closest elem in _member_elems
+  const Elem * centroid_elem = _seed;
+  Real distance = std::numeric_limits<double>::max();
+  for (auto & e : _member_elems)
+  {
+    Real d = (centroid - e->centroid()).norm();
+    if (d < distance)
+    {
+      distance = d;
+      centroid_elem = e;
+    }
+  }
+
+  return centroid_elem;
 }
