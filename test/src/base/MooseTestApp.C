@@ -76,6 +76,7 @@ MooseTestApp::registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_
     registerSyntaxTask("AddLotsOfAuxVariablesAction", "LotsOfAuxVariables/*", "add_variable");
     registerSyntax("ApplyCoupledVariablesTestAction", "ApplyInputParametersTest");
     registerSyntax("AddLotsOfDiffusion", "Testing/LotsOfDiffusion/*");
+    registerSyntax("AddLotsOfFVAdvectionReaction", "Testing/LotsOfFVAdvectionReaction");
     registerSyntax("TestGetActionsAction", "TestGetActions");
     registerSyntax("BadAddKernelAction", "BadKernels/*");
     registerSyntax("AddMatAndKernel", "AddMatAndKernel");
