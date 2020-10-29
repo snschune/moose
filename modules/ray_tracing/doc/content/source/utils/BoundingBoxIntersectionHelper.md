@@ -1,0 +1,3 @@
+# BoundingBoxIntersectionHelper
+
+!alert construction
