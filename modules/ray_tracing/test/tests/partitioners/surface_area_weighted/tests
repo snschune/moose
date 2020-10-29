@@ -1,0 +1,24 @@
+[Tests]
+  [test_replicated]
+    type = RunApp # Exodiff
+    input = 'surface_area_weighted.i'
+    cli_args = 'Outputs/file_base=surface_area_weighted_replicated_out'
+    petsc_version = '>=3.9.3'
+    # TODO: make this a diff once we can make it non-platform dependent
+    # exodiff = 'surface_area_weighted_replicated_out.e'
+    # min_parallel = 4
+    # max_parallel = 4
+    # mesh_mode = replicated
+  []
+  [test_distributed]
+    type = RunApp # Exodiff
+    input = 'surface_area_weighted.i'
+    cli_args = 'Outputs/file_base=surface_area_weighted_distributed_out'
+    petsc_version = '>=3.9.3'
+    # TODO: make this a diff once we can make it non-platform dependent
+    # exodiff = 'surface_area_weighted_distributed_out.e'
+    # min_parallel = 4
+    # max_parallel = 4
+    # mesh_mode = distributed
+  []
+[]

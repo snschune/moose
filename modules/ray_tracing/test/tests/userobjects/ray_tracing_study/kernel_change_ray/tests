@@ -1,0 +1,8 @@
+[Tests]
+  [test]
+    type = 'CSVDiff'
+    input = 'kernel_change_ray.i'
+    csvdiff = 'kernel_change_ray_out.csv'
+    allow_test_objects = true
+  []
+[]

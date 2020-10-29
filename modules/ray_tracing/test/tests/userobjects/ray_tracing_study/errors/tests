@@ -1,0 +1,26 @@
+[Tests]
+  [add_outside_of_generation]
+    type = RunException
+    input = 'ray_tracing_study_errors.i'
+    cli_args = 'UserObjects/study/add_outside_of_generation=true'
+    expect_err = 'Rays can only be added to the buffer during generateRays'
+    allow_test_objects = true
+  []
+  [add_outside_of_generation_with_during]
+    type = RunException
+    input = 'ray_tracing_study_errors.i'
+    cli_args = 'UserObjects/study/add_outside_of_generation=true
+                UserObjects/study/allow_addition_during_execution=true'
+    expect_err = 'Rays can only be added to the buffer during generateRays\(\) and tracing'
+    allow_test_objects = true
+  []
+  [add_thread1]
+    type = RunException
+    input = 'ray_tracing_study_errors.i'
+    cli_args = 'UserObjects/study/add_thread1_during_generation=true'
+    expect_err = 'Rays can only be added on thread 0 during generateRays'
+    allow_test_objects = true
+    min_threads = 2
+    max_parallel = 1
+  []
+[]

@@ -1,0 +1,19 @@
+[Tests]
+  requirement = 'The system shall support line integrals in the'
+  [line_integral]
+    [rz]
+      type = 'CSVDiff'
+      input = 'rz_line_integral.i'
+      csvdiff = 'rz_line_integral_out.csv'
+
+      detail = 'rz coordinate system'
+    []
+    [rspherical]
+      type = 'CSVDiff'
+      input = 'rspherical_line_integral.i'
+      csvdiff = 'rspherical_line_integral_out.csv'
+
+      detail = 'and the rspherical coordinate system.'
+    []
+  []
+[]

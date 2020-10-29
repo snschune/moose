@@ -1,0 +1,10 @@
+[Tests]
+  [test]
+    type = 'CSVDiff'
+    input = 'reflect_ray_bc.i'
+    csvdiff = 'reflect_ray_bc_out.csv'
+    allow_test_objects = true
+
+    requirement = 'The system shall support reflecting rays on a boundary.'
+  []
+[]

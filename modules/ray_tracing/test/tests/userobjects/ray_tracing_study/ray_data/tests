@@ -1,0 +1,7 @@
+[Tests]
+  [test]
+    type = 'RunApp'
+    input = 'ray_data.i'
+    allow_test_objects = true
+  []
+[]

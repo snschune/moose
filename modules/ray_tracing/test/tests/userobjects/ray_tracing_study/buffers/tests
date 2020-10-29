@@ -1,0 +1,22 @@
+[Tests]
+  [lifo]
+    type = 'CSVDiff'
+    input = '../lots.i'
+    csvdiff = 'lots_out.csv'
+    cli_args = 'UserObjects/lots/work_buffer_type=lifo
+                Outputs/file_base=lots_out'
+    allow_test_objects = true
+    recover = false
+  []
+
+  [circular]
+    type = 'CSVDiff'
+    input = '../lots.i'
+    csvdiff = 'lots_out.csv'
+    cli_args = 'UserObjects/lots/work_buffer_type=circular
+                Outputs/file_base=lots_out'
+    allow_test_objects = true
+    recover = false
+    prereq = lifo
+  []
+[]

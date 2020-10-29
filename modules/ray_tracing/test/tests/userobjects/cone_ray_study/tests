@@ -1,0 +1,29 @@
+[Tests]
+  [test]
+    type = 'Exodiff'
+    input = 'cone_ray_study.i'
+    exodiff = 'cone_ray_study_out.e'
+  []
+  [rays]
+    type = 'Exodiff'
+    input = cone_ray_study.i
+    exodiff = 'cone_ray_study_rays.e'
+    cli_args = 'Outputs/exodus=false
+                Outputs/rays/execute_on=FINAL
+                UserObjects/study/always_cache_traces=true'
+  []
+
+  [test_3d]
+    type = 'Exodiff'
+    input = 'cone_ray_study_3d.i'
+    exodiff = 'cone_ray_study_3d_out.e'
+  []
+  [rays_3d]
+    type = 'Exodiff'
+    input = 'cone_ray_study_3d.i'
+    exodiff = 'cone_ray_study_3d_rays.e'
+    cli_args = 'Outputs/exodus=false
+                Outputs/rays/execute_on=FINAL
+                UserObjects/study/always_cache_traces=true'
+  []
+[]

@@ -1,0 +1,33 @@
+[Tests]
+  [smart]
+    type = 'CSVDiff'
+    input = '../lots.i'
+    csvdiff = 'lots_out.csv'
+    cli_args = 'UserObjects/lots/method=smart
+                Outputs/file_base=lots_out'
+    allow_test_objects = true
+    recover = false
+  []
+
+  [bs]
+    type = 'CSVDiff'
+    input = '../lots.i'
+    csvdiff = 'lots_out.csv'
+    cli_args = 'UserObjects/lots/method=bs
+                Outputs/file_base=lots_out'
+    allow_test_objects = true
+    recover = false
+    prereq = smart
+  []
+
+  [harm]
+    type = 'CSVDiff'
+    input = '../lots.i'
+    csvdiff = 'lots_out.csv'
+    cli_args = 'UserObjects/lots/method=harm
+                Outputs/file_base=lots_out'
+    allow_test_objects = true
+    recover = false
+    prereq = bs
+  []
+[]

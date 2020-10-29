@@ -1,0 +1,7 @@
+[Tests]
+  [max_distance]
+    type = 'CSVDiff'
+    input = 'max_distance.i'
+    csvdiff = 'max_distance_out.csv'
+  []
+[]

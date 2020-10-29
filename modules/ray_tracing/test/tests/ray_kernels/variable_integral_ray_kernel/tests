@@ -1,0 +1,14 @@
+[Tests]
+  [test]
+    type = 'CSVDiff'
+    input = 'variable_integral_ray_kernel.i'
+    csvdiff = 'variable_integral_ray_kernel_out.csv'
+    requirement = 'The system shall provide the ability to compute the integral of a variable along a line.'
+  []
+  [simple_diffusion]
+    type = 'CSVDiff'
+    input = 'simple_diffusion_line_integral.i'
+    csvdiff = 'simple_diffusion_line_integral_out.csv'
+    requirement = 'The system shall provide the ability to compute the line integral of a variable along a line with a 2D diffusion problem including a volumetric source.'
+  []
+[]
