@@ -23,7 +23,7 @@ RayKernelTempl<T>::validParams()
   auto params = IntegralRayKernelBase::validParams();
   params += TaggingInterface::validParams();
 
-  params.addRequiredParam<NonlinearVariableName>(
+  params.template addRequiredParam<NonlinearVariableName>(
       "variable", "The name of the variable that this RayKernel operates on");
 
   return params;

@@ -7,7 +7,12 @@
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
 
+// TODO: remove ignore warnings once std::tuple<> is instantiated as a StandardType
+// Using push_parallel_vector_data with std::tuple<> leads to a -Wextra error
+// https://github.com/libMesh/TIMPI/issues/52
+#include "libmesh/ignore_warnings.h"
 #include "RayTracingMeshOutput.h"
+#include "libmesh/restore_warnings.h"
 
 // Local Includes
 #include "RayTracingStudy.h"
