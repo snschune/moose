@@ -360,7 +360,7 @@ ParallelStudy<Object, Context>::ParallelStudy(const libMesh::Parallel::Communica
 
 #ifndef LIBMESH_HAVE_OPENMP
   if (libMesh::n_threads() != 1)
-    mooseError(_name, " is not compatabile with threads without OpenMP");
+    mooseWarning(_name, ": Threading will not be used without OpenMP");
 #endif
 }
 
