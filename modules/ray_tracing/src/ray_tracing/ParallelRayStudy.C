@@ -7,8 +7,10 @@
 ParallelRayStudy::ParallelRayStudy(
     RayTracingStudy & ray_tracing_study,
     const std::vector<std::shared_ptr<TraceRay>> & threaded_trace_ray)
-  : ParallelStudy<Ray, RayTracingStudy>(
-        ray_tracing_study.comm(), ray_tracing_study, ray_tracing_study.parameters()),
+  : ParallelStudy<Ray, RayTracingStudy>(ray_tracing_study.comm(),
+                                        ray_tracing_study,
+                                        ray_tracing_study.parameters(),
+                                        "ParallelRayStudy"),
     _ray_tracing_study(ray_tracing_study),
     _threaded_trace_ray(threaded_trace_ray)
 {

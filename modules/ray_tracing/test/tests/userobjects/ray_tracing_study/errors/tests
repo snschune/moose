@@ -22,5 +22,6 @@
     allow_test_objects = true
     min_threads = 2
     max_parallel = 1
+    threading = OPENMP
   []
 []
