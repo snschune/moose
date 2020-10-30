@@ -5,7 +5,7 @@
     exodiff = 'hierarchical_grid_partitioner_out.e'
 
     requirement = "MOOSE shall have the ability to do hierarchical partitioning based on a regular grid."
-    design = 'HierarchicalGridPartitioner'
+    design = 'HierarchicalGridPartitioner.md'
     issues = '#12531'
 
     min_parallel = 16

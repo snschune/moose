@@ -4,7 +4,7 @@
 
 ## Description
 
-The HierarchicalGridPartitioner is a two-level partitioner similar to [GridPartitioner](/GridPartitioner.md).  The idea is to use a coarse grid with the number of computational nodes (nodes in your cluster you are going to use) to first partition the domain.  Then use a finer-grained grid within each of those partitions to partition for each processor within the computational node.
+The HierarchicalGridPartitioner is a two-level partitioner similar to [GridPartitioner.md].  The idea is to use a coarse grid with the number of computational nodes (nodes in your cluster you are going to use) to first partition the domain.  Then use a finer-grained grid within each of those partitions to partition for each processor within the computational node.
 
 This type of scheme keeps down off-node communication, minimizing network communication during large simulations.
 
@@ -12,7 +12,7 @@ This type of scheme keeps down off-node communication, minimizing network commun
 
 An example is the best way to explain what's going on.  The mesh in [hier_mesh] is the mesh we want to partition.  It has 128x128 elements in it (16,384 total).  We're going to be running on a cluster where we're going to use 4 computational nodes - each of which has 16 processors (64 processors total).
 
-As shown in [hier_grid] utilizing [GridPartitioner](/GridPartitioner.md) we can get a decent partitioning of this mesh by specifying the partitioning grid to be 8x8.
+As shown in [hier_grid] utilizing [GridPartitioner.md] we can get a decent partitioning of this mesh by specifying the partitioning grid to be 8x8.
 
 Now, the "problem" with this partitionining is that it will do quite a bit of off-processor communication.  Consider what's on the second node (the third and fourth rows from the bottom).  In total there will be 2x128=256 element faces with off-processor neighbors (everything above and below those two rows).  In this case that isn't even that bad.  If we were using even more processors (say 128) then each node would have a long "strip" of partitions on it where each partition would communicate both above and below it.
 
