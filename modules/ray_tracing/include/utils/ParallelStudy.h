@@ -33,7 +33,8 @@ public:
 
   ParallelStudy(const libMesh::Parallel::Communicator & comm,
                 Context & context,
-                const InputParameters & params);
+                const InputParameters & params,
+                const std::string & name);
 
   /**
    * Pre-execute method that MUST be called before execute() and before adding objects.
@@ -312,11 +313,12 @@ private:
 template <typename Object, typename Context>
 ParallelStudy<Object, Context>::ParallelStudy(const libMesh::Parallel::Communicator & comm,
                                               Context & context,
-                                              const InputParameters & params)
+                                              const InputParameters & params,
+                                              const std::string & name)
   : ParallelObject(comm),
     _context(context),
     _pid(comm.rank()),
-    _name("temp_name"),
+    _name(name),
 
     _method((ParallelStudyMethod)(int)(params.get<MooseEnum>("method"))),
     _min_buffer_size(params.isParamSetByUser("min_buffer_size")
