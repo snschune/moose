@@ -10,6 +10,12 @@
     order = CONSTANT
     fv = true
   []
+
+  [g]
+    family = MONOMIAL
+    order = CONSTANT
+    fv = true
+  []
 []
 
 [FVKernels]
