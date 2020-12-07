@@ -13,8 +13,6 @@
 
 registerMooseObject("TensorMechanicsApp", NormalBoundaryDisplacement);
 
-defineLegacyParams(NormalBoundaryDisplacement);
-
 InputParameters
 NormalBoundaryDisplacement::validParams()
 {

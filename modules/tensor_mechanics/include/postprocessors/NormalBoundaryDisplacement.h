@@ -11,12 +11,6 @@
 
 #include "SidePostprocessor.h"
 
-// Forward Declarations
-class NormalBoundaryDisplacement;
-
-template <>
-InputParameters validParams<NormalBoundaryDisplacement>();
-
 /**
  * This postprocessor computes displacements normal to a provided
  * set of boundaries
